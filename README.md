@@ -285,14 +285,14 @@
   - `category_id : Category Id`   
 - **Body**:
   ```json
- {
+  {
     "name":"name of the product",
     "description": "Product Description",
     "price": 1500.00,
     "availability" : 50,
-    "SKU" : "IND-CL-S",     "//Product Identifier"
+    "SKU" : "IND-CL-S -- Product Identifier",
     "color":"Silver"
-}
+  }
 
 #### Responses
   - **200 OK**
@@ -324,10 +324,10 @@
   - `product_id : Product Id`   
 - **Body**:
   ```json
- {
+  {
     "imageName": "Name of the image",
     "contentType": "image/jpg"
- }
+  }
 
 #### Responses
   - **200 OK**
@@ -345,46 +345,6 @@
       "message": "Product not found"
     }
 
-
-### 1.2.2 Create product under specific category
-
-- **URL**: `/product/create/product/:category_id`
-- **Method**: `POST`
-- **Description**: Create new product under specific category
-
-#### Request
-
-- **Headers**:
-  - `Content-Type: application/json`,
-  - `Authorization: Bearer <TOKEN>`
-- **params**:
-  - `category_id : Category Id`   
-- **Body**:
-  ```json
-  {
-    "name":"name of the product",
-    "description": "Product Description",
-    "price": 1500.00,
-    "availability" : 50,
-    "SKU" : "IND-CL-S -- Product Identifier",
-    "color":"Silver"
-   }
-
-#### Responses
-  - **200 OK**
-    ```json
-    {
-      "success": true,
-      "message": "Product Created Successfully",
-      "product": "details of the product"
-    }
-  - **404 Not Found**
-    ```json
-    {
-      "success": false,
-      "message": "Category not found"
-    }
-
 ### 1.2.4 store that s3 stored image data into database
 
 - **URL**: `/product/create/gallery/:product_id`
@@ -400,9 +360,9 @@
   - `product_id : Product Id`   
 - **Body**:
   ```json
- {
+  {
     "key": "key of the  image which is stored in the s3 bucket",   `//Get the key after storing in the s3`
-}
+  }
 
 #### Responses
   - **200 OK**
@@ -433,9 +393,9 @@
   - `product_id : Product Id`   
 - **Body**:
   ```json
- {
+  {
     "key": "key of the  image which is stored in the s3 bucket",   `//Get the key after storing in the s3`
-}
+  }
 
 #### Responses
   - **200 OK**
