@@ -1,0 +1,13 @@
+Initial Admin : {
+  "full_name" : "Taranjit Singh",
+  "email" : "taranjeet@gmail.com",
+  "password":"123456",
+  "role":"admin"
+}
+
+Moderator : {
+  "full_name" : "Ravneet Singh",
+  "email" : "ravneet@gmail.com",
+  "password":"123456",
+  "role":"moderator"
+}

@@ -1,0 +1,176 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  user_id           String    @id @default(uuid())
+  email             String    @unique
+  full_name         String?
+  phone_number      String?
+  registration_date DateTime  @default(now())
+  last_login_date   DateTime?
+  is_active         Boolean   @default(true)
+  address           Address[]
+  reviews           Review[]
+  cart              Cart?
+  // orders             Order[]
+  Order             Order[]
+  otp               U_OTP?
+}
+
+enum AdminRole {
+  admin
+  moderator
+}
+
+model Admin {
+  admin_id   String    @id @default(uuid())
+  email      String    @unique
+  password   String
+  full_name  String
+  role       AdminRole @default(moderator)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  otp        A_OTP?
+}
+
+model A_OTP {
+  admin_id   String   @id
+  admin      Admin    @relation(fields: [admin_id], references: [admin_id])
+  code       String
+  created_at DateTime @default(now())
+  expires_at DateTime
+}
+
+model U_OTP {
+  user_id    String   @id @unique
+  user       User     @relation(fields: [user_id], references: [user_id])
+  code       String
+  created_at DateTime @default(now())
+  expires_at DateTime
+}
+
+// Define the Address entity
+model Address {
+  address_id     String  @id @default(uuid())
+  street_address String
+  city           String
+  state          String
+  country        String
+  postal_code    String
+  user           User    @relation(fields: [user_id], references: [user_id])
+  user_id        String  @unique
+  orders         Order[]
+}
+
+model Category {
+  category_id String    @id @default(uuid())
+  name        String
+  description String?
+  products    Product[]
+}
+
+// Define Product entity
+model Product {
+  product_id     String   @id @default(uuid())
+  name           String
+  description    String
+  price          Float
+  discount_price Float?
+  availablity    Int      @default(0)
+  SKU            String   @unique
+  color          String
+  category       Category @relation(fields: [category_id], references: [category_id])
+  category_id    String
+  // variants      ProductVariants[]
+
+  reviews Review[]
+
+  images    ProductImage[]
+  CartItem  CartItem[]
+  OrderItem OrderItem[]
+}
+
+// Define Prodcut image entity
+model ProductImage {
+  image_id      String  @id @default(uuid())
+  key           String
+  url           String
+  product       Product @relation(fields: [product_id], references: [product_id])
+  product_id    String
+}
+
+model Review {
+  review_id    String        @id @default(uuid())
+  user         User          @relation(fields: [user_id], references: [user_id])
+  user_id      String
+  product      Product       @relation(fields: [product_id], references: [product_id])
+  product_id   String
+  rating       Int
+  review_text  String
+  review_date  DateTime      @default(now())
+  reviewImages ReviewImage[]
+}
+
+model ReviewImage {
+  image_id      String @id @default(uuid())
+  key           String
+  url           String
+  review        Review @relation(fields: [review_id], references: [review_id])
+  review_id     String
+}
+
+model Cart {
+  cart_id    String     @id @default(uuid())
+  user       User?      @relation(fields: [user_id], references: [user_id])
+  user_id    String?    @unique
+  cartItems  CartItem[]
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+}
+
+model CartItem {
+  cart_item_id String  @id @default(uuid())
+  cart         Cart    @relation(fields: [cart_id], references: [cart_id])
+  cart_id      String
+  product      Product @relation(fields: [product_id], references: [product_id])
+  product_id   String
+  quantity     Int
+
+  @@unique([cart_id, product_id])
+}
+
+model Order {
+  order_id            String      @id @default(uuid())
+  user                User        @relation(fields: [user_id], references: [user_id])
+  user_id             String
+  order_date          DateTime    @default(now())
+  total_amount        Float
+  status              String
+  payment_method      String
+  shipping_address    Address     @relation(fields: [shipping_address_id], references: [address_id])
+  shipping_address_id String
+  order_items         OrderItem[]
+}
+
+model OrderItem {
+  order_item_id String  @id @default(uuid())
+  order         Order   @relation(fields: [order_id], references: [order_id])
+  order_id      String
+  product       Product @relation(fields: [product_id], references: [product_id])
+  product_id    String
+  quantity      Int
+  unit_price    Float
+  subTotal      Float
+}

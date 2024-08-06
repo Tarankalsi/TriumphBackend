@@ -1,0 +1,58 @@
+general ->  /api/v1 
+
+    Product
+
+--> /product/create/category                                - POST      (create category)
+--> /product/create/product/:category_id                    - POST      (create product under the category)
+--> /product/create/gallery/presigned/:product_id           - POST      (get presigned url to upload image on S3)
+--> /product/create/gallery/:product_id                     - POST      (add metadata of product image in database)
+--> /product/update/product/:product_id                     - POST      (update that specific product)
+--> /product/delete/gallery/:image_id                       - DELETE    (Delete image from database nd s3)
+--> /product/category/:category_id                          - GET       (Fetch products of specific category)
+--> /product/categories                                     - GET       (Fetch all categories)
+--> /product/:product_id                                    - GET       (Fetch specific product data)
+
+    Admin
+
+//Forgot Password Route Pending 
+
+--> /admin/signup                                           - POST      (Create new admin) Note -> for first admin no need to login , but after that only admin can create new admin nor the moderator
+--> /admin/signin                                           - POST      (Login Route)      
+--> /admin/adminId                                          - GET       (Get adminId to changePassword mainly)
+--> /admin/change-password/:admin_id                        - POST      (set new password by old password)
+--> /admin/otp-verification/:admin_id                       - POST      (OTP Verification for admin to get token)  
+
+  
+    User
+--> /user/signup                                            - POST      (Create new User Accoount)
+--> /user/signin                                            - POST      (LogIn into your account)
+--> /user/otp-verification/user_id
+--> /user/create/cart                                       - POST      (Create new cart) 
+--> /user/addToCart/:product_id                             - POST      (Add items into the cart)
+--> /user/cart                                              - GET       (Fetch the details of cart)
+--> /user/create/review/:product_id                         - POST      (Add new review on product)
+--> /user/create/review/images/presigned/:review_id         - POST      (get presigned url to upload images in s3)
+--> /user/create/review/images/:review_id                   - POST      (add metadata of images in reviewImage)
+--> /user/delete/review/:review_id                          - POST      (delete the specific review)
+
+Done 
+--> Email Integration for user 
+--> User signin and signup by otp authentification of email integration 
+--> Upload images for review
+--> Add review 
+--> Delete review  
+--> Add user behvaiour when in cart system
+--> Email Integration for admin
+--> email integration in admin sign and signup
+--> send credential of new admin into their email
+--> Convert cloudinary to aws s3
+
+
+Pending  
+--> Email Verification
+--> Payment Integration
+--> Serverless Framework integration and aws lambda
+--> fetch all data important details specifically (like user, product etc)
+--> Add search bar api route
+--> add admin authentification middleware in routes
+
