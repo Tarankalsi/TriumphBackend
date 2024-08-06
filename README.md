@@ -327,17 +327,17 @@
  {
     "imageName": "Name of the image",
     "contentType": "image/jpg"
-}
+ }
 
 #### Responses
   - **200 OK**
     ```json
-    {
-      "success": true,
-      "message": "Files uploaded successfully",
-      "url" : "URL of the image store in the s3 bucket",
-      "key" : "Key of the image or s3 path of image"
-    }
+     {
+       "success": true,
+       "message": "Files uploaded successfully",
+       "url" : "URL of the image store in the s3 bucket",
+       "key" : "Key of the image or s3 path of image"
+     }
   - **404 Not Found**
     ```json
     {
@@ -361,14 +361,14 @@
   - `category_id : Category Id`   
 - **Body**:
   ```json
- {
+  {
     "name":"name of the product",
     "description": "Product Description",
     "price": 1500.00,
     "availability" : 50,
-    "SKU" : "IND-CL-S",     "//Product Identifier"
+    "SKU" : "IND-CL-S -- Product Identifier",
     "color":"Silver"
-}
+   }
 
 #### Responses
   - **200 OK**
