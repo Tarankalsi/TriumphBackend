@@ -345,7 +345,7 @@
       "message": "Product not found"
     }
 
-### 1.2.4 store that s3 stored image data into database
+### 1.2.4 Store the metadata of the s3 image  into database
 
 - **URL**: `/product/create/gallery/:product_id`
 - **Method**: `POST`
