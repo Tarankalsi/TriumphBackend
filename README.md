@@ -36,7 +36,9 @@
     
 ## 1. Admin
 
-### 1.1 Register New Admin
+### 1.1 Authentification
+
+### 1.1.1 Register New Admin
 
 - **URL**: `/admin/signup`
 - **Method**: `POST`
@@ -86,7 +88,7 @@
       "message": "You're not allowed to create new admin"
     }
 
-### 1.2 Login Admin
+### 1.1.2 Login Admin
 
 - **URL**: `/admin/signin`
 - **Method**: `POST`
@@ -119,7 +121,7 @@
       "message": "Incorrect Credentials"
     }
 
-### 1.3 OTP Verification
+### 1.1.3 OTP Verification
 
 - **URL**: `/admin/otp-verification/:admin_id`
 - **Method**: `POST`
@@ -168,7 +170,7 @@
       "message": "OTP is Expired"
     }
 
-### 1.4 Get admin Id
+### 1.1.4 Get admin Id
 
 - **URL**: `/admin/adminId`
 - **Method**: `GET`
@@ -201,7 +203,7 @@
       "success": false,
       "message": "Otp is null in the database"
     }
-### 1.3 Change Password
+### 1.1.5 Change Password
 
 - **URL**: `/admin/otp-verification/:admin_id`
 - **Method**: `POST`
@@ -238,4 +240,243 @@
     {
       "success": false,
       "message": "Admin Not Found"
+    }
+
+### 1.2 Product CRUD Operations
+
+### 1.2.1  Create New Category of Products
+
+- **URL**: `/product/create/category`
+- **Method**: `POST`
+- **Description**: Create new category of products
+
+#### Request
+
+- **Headers**:
+  - `Content-Type: application/json`,
+  - `Authorization: Bearer <TOKEN>`
+- **Body**:
+  ```json
+  {
+    "name": "category_name"
+  }
+
+#### Responses
+  - **200 OK**
+    ```json
+    {
+      "success": true,
+      "message": "Category Created Successfully",
+      "category": "specific category details which just created"
+    }
+
+### 1.2.2 Create product under specific category
+
+- **URL**: `/product/create/product/:category_id`
+- **Method**: `POST`
+- **Description**: Create new product under specific category
+
+#### Request
+
+- **Headers**:
+  - `Content-Type: application/json`,
+  - `Authorization: Bearer <TOKEN>`
+- **params**:
+  - `category_id : Category Id`   
+- **Body**:
+  ```json
+ {
+    "name":"name of the product",
+    "description": "Product Description",
+    "price": 1500.00,
+    "availability" : 50,
+    "SKU" : "IND-CL-S",     "//Product Identifier"
+    "color":"Silver"
+}
+
+#### Responses
+  - **200 OK**
+    ```json
+    {
+      "success": true,
+      "message": "Product Created Successfully",
+      "product": "details of the product"
+    }
+  - **404 Not Found**
+    ```json
+    {
+      "success": false,
+      "message": "Category not found"
+    }
+
+### 1.2.3 Get pre signed url to store images
+
+- **URL**: `/product/create/gallery/presigned/:product_id`
+- **Method**: `POST`
+- **Description**: Get pre signed url or we can say create aws url to store images in S3 bucket
+
+#### Request
+
+- **Headers**:
+  - `Content-Type: application/json`,
+  - `Authorization: Bearer <TOKEN>`
+- **params**:
+  - `product_id : Product Id`   
+- **Body**:
+  ```json
+ {
+    "imageName": "Name of the image",
+    "contentType": "image/jpg"
+}
+
+#### Responses
+  - **200 OK**
+    ```json
+    {
+      "success": true,
+      "message": "Files uploaded successfully",
+      "url" : "URL of the image store in the s3 bucket",
+      "key" : "Key of the image or s3 path of image"
+    }
+  - **404 Not Found**
+    ```json
+    {
+      "success": false,
+      "message": "Product not found"
+    }
+
+
+### 1.2.2 Create product under specific category
+
+- **URL**: `/product/create/product/:category_id`
+- **Method**: `POST`
+- **Description**: Create new product under specific category
+
+#### Request
+
+- **Headers**:
+  - `Content-Type: application/json`,
+  - `Authorization: Bearer <TOKEN>`
+- **params**:
+  - `category_id : Category Id`   
+- **Body**:
+  ```json
+ {
+    "name":"name of the product",
+    "description": "Product Description",
+    "price": 1500.00,
+    "availability" : 50,
+    "SKU" : "IND-CL-S",     "//Product Identifier"
+    "color":"Silver"
+}
+
+#### Responses
+  - **200 OK**
+    ```json
+    {
+      "success": true,
+      "message": "Product Created Successfully",
+      "product": "details of the product"
+    }
+  - **404 Not Found**
+    ```json
+    {
+      "success": false,
+      "message": "Category not found"
+    }
+
+### 1.2.4 store that s3 stored image data into database
+
+- **URL**: `/product/create/gallery/:product_id`
+- **Method**: `POST`
+- **Description**: Store the metadata of the image of s3 into the database ( Compulsory step after storing image in s3 )
+
+#### Request
+
+- **Headers**:
+  - `Content-Type: application/json`,
+  - `Authorization: Bearer <TOKEN>`
+- **params**:
+  - `product_id : Product Id`   
+- **Body**:
+  ```json
+ {
+    "key": "key of the  image which is stored in the s3 bucket",   `//Get the key after storing in the s3`
+}
+
+#### Responses
+  - **200 OK**
+    ```json
+    {
+      "success": true,
+      "message": "File metadata stored successfully"
+    }
+  - **404 Not Found**
+    ```json
+    {
+      "success": false,
+      "message": "Product not found"
+    }
+
+### 1.2.5 Update Product 
+
+- **URL**: `/product/update/product/:product_id`
+- **Method**: `POST`
+- **Description**: Store the metadata of the image of s3 into the database ( Compulsory step after storing image in s3 )
+
+#### Request
+
+- **Headers**:
+  - `Content-Type: application/json`,
+  - `Authorization: Bearer <TOKEN>`
+- **params**:
+  - `product_id : Product Id`   
+- **Body**:
+  ```json
+ {
+    "key": "key of the  image which is stored in the s3 bucket",   `//Get the key after storing in the s3`
+}
+
+#### Responses
+  - **200 OK**
+    ```json
+    {
+      "success": true,
+      "message": "Product Updated Successfully",
+      "product": "updated data of a product"
+    }
+  - **404 Not Found**
+    ```json
+    {
+      "success": false,
+      "message": "Product not found"
+    }
+
+### 1.2.5 Delete Image of the Product 
+
+- **URL**: `/product/delete/gallery/:image_id`
+- **Method**: `DELETE`
+- **Description**: Store the metadata of the image of s3 into the database ( Compulsory step after storing image in s3 )
+
+#### Request
+
+- **Headers**:
+  - `Content-Type: application/json`,
+  - `Authorization: Bearer <TOKEN>`
+- **params**:
+  - `image_id : Image Id`
+    
+
+#### Responses
+  - **200 OK**
+    ```json
+    {
+      "success": true,
+      "message": "Deleted Successfully"
+    }
+  - **404 Not Found**
+    ```json
+    {
+      "success": false,
+      "message": "Image Not Found"
     }
