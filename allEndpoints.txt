@@ -46,6 +46,8 @@ Done
 --> email integration in admin sign and signup
 --> send credential of new admin into their email
 --> Convert cloudinary to aws s3
+--> add admin authentification middleware in routes
+
 
 
 Pending  
@@ -54,5 +56,5 @@ Pending
 --> Serverless Framework integration and aws lambda
 --> fetch all data important details specifically (like user, product etc)
 --> Add search bar api route
---> add admin authentification middleware in routes
-
+--> Add AWS rds      // will add url of instance at the end
+--> add features like remove cart after few days

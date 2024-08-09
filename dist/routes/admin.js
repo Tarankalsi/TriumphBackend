@@ -101,7 +101,7 @@ adminRouter.post('/signup', checkAdminsExist_middleware_1.checkAdminsExist, (req
                     html: html
                 };
                 const response = yield (0, sendEmail_1.sendEmail)(emailData);
-                return res.status(statusCode_1.default.OK).json({
+                return res.status(statusCode_1.default.CREATED).json({
                     success: true,
                     message: `New Admin Created`
                 });

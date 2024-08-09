@@ -22,9 +22,9 @@ mainRouter.use("/user", user_1.default);
 mainRouter.use("/product", product_1.default);
 mainRouter.use("/admin", admin_1.default);
 mainRouter.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const url = yield (0, s3_1.init)();
+    const url = yield (0, s3_1.getObjectURL)("reviewImage/b4e80c15-fe67-49ef-bd80-0c557cb1ee55/review1722621934819.jpg");
     return res.status(200).json({
-        url: url
+        url: url,
     });
 }));
 exports.default = mainRouter;

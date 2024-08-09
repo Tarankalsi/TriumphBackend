@@ -19,16 +19,23 @@ const zod_1 = require("../zod");
 const client_1 = require("@prisma/client");
 const statusCode_1 = __importDefault(require("../statusCode"));
 const handleErrorResponse_1 = __importDefault(require("../utils/handleErrorResponse"));
-const multer_middleware_1 = require("../middleware/multer.middleware");
-const cloudinary_1 = require("../utils/cloudinary");
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const otpHandler_1 = require("../utils/otpHandler");
 const sendEmail_1 = require("../utils/sendEmail");
 const userIsLoggedIn_middleware_1 = require("../middleware/userIsLoggedIn.middleware");
+const s3_1 = require("../utils/s3");
 const userRouter = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 const CART_JWT_SECRET_KEY = process.env.CART_JWT_SECRET_KEY;
 const JWT_SECRET_KEY_USER = process.env.JWT_SECRET_KEY_USER;
+const allowedFormats = ['jpeg', 'jpg', 'png', 'gif', 'bmp', 'webp'];
+const contentTypeToExtension = {
+    'image/jpeg': 'jpeg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/bmp': 'bmp',
+    'image/webp': 'webp',
+};
 userRouter.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const body = req.body;
     const { success, error } = zod_1.user_signupSchema.safeParse(body);
@@ -370,14 +377,18 @@ userRouter.post('/create/review/:product_id', auth_middleware_1.userAuthMiddlewa
         (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
     }
 }));
-userRouter.post("/create/review/images/:review_id", auth_middleware_1.userAuthMiddleware, multer_middleware_1.upload.array("review", 4), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const images = req.files;
-    if (!images) {
+userRouter.post("/create/review/images/presigned/:review_id", auth_middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const body = req.body;
+    const { success } = zod_1.signedUrlImageSchema.safeParse(body);
+    if (!success) {
         return res.status(statusCode_1.default.BAD_REQUEST).json({
             success: false,
-            message: "No files Uploaded",
+            message: "zod validation Error",
         });
     }
+    console.log(body.imageName);
+    console.log(body.contentType);
+    let fileExtension = body.imageName.split('.').pop().toLowerCase();
     try {
         const review_id = req.params.review_id;
         const reviewExist = yield prisma.review.findUnique({
@@ -391,27 +402,26 @@ userRouter.post("/create/review/images/:review_id", auth_middleware_1.userAuthMi
                 message: "Review Not Found",
             });
         }
-        const uploadPromises = images.map((image) => __awaiter(void 0, void 0, void 0, function* () {
-            try {
-                const response = yield (0, cloudinary_1.uploadOnCloudinary)(image.path);
-                yield prisma.reviewImage.create({
-                    data: {
-                        url: response.url,
-                        url_public_id: response.public_id,
-                        review_id: review_id,
-                    },
+        // Validate the file extension
+        if (!allowedFormats.includes(fileExtension)) {
+            // If the extension is not provided or invalid, use the content type
+            fileExtension = contentTypeToExtension[body.contentType];
+            if (!fileExtension) {
+                return res.status(statusCode_1.default.BAD_REQUEST).json({
+                    success: false,
+                    message: "Invalid file format or content type",
                 });
-                return response; // Return response after handling it
             }
-            catch (error) {
-                console.error("Error uploading image:", error);
-                throw new Error("Error uploading image to Cloudinary");
-            }
-        }));
-        const allResponses = yield Promise.all(uploadPromises);
-        res
-            .status(200)
-            .json({ message: "Files uploaded successfully", response: allResponses });
+        }
+        const baseImageName = body.imageName.split('.')[0];
+        const date = new Date().getTime();
+        const key = `reviewImage/${review_id}/${baseImageName}${date}.${fileExtension}`;
+        const url = yield (0, s3_1.uploadImageS3)(key, body.contentType);
+        res.status(200).json({
+            message: "Files uploaded successfully",
+            url: url,
+            key: key
+        });
     }
     catch (error) {
         console.error("Error uploading image:", error);
@@ -419,6 +429,42 @@ userRouter.post("/create/review/images/:review_id", auth_middleware_1.userAuthMi
             success: false,
             message: "Internal Server Error",
             error: error
+        });
+    }
+}));
+userRouter.post("/create/review/images/:review_id", auth_middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const review_id = req.params.review_id;
+    const { key } = req.body; // This should be the S3 key returned after upload
+    try {
+        const reviewExist = yield prisma.review.findUnique({
+            where: {
+                review_id: review_id,
+            },
+        });
+        if (!reviewExist) {
+            return res.status(404).json({
+                success: false,
+                message: 'Review Not Found',
+            });
+        }
+        const url = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
+        yield prisma.reviewImage.create({
+            data: {
+                review_id: reviewExist.review_id,
+                url: url,
+                key: key
+            }
+        });
+        res.status(statusCode_1.default.OK).json({
+            success: true,
+            message: "File metadata stored successfully"
+        });
+    }
+    catch (error) {
+        console.error('Error storing image metadata:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal Server Error',
         });
     }
 }));
@@ -441,7 +487,7 @@ userRouter.delete('/delete/review/:review_id', auth_middleware_1.userAuthMiddlew
             });
         }
         review.reviewImages.map((image) => __awaiter(void 0, void 0, void 0, function* () {
-            yield (0, cloudinary_1.deleteFromCloudinary)(image.image_id);
+            yield (0, s3_1.deleteObjectS3)(image.key);
         }));
         yield prisma.reviewImage.deleteMany({
             where: {

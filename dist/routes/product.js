@@ -17,13 +17,13 @@ const express_1 = require("express");
 const zod_1 = require("../zod");
 const client_1 = require("@prisma/client");
 const statusCode_1 = __importDefault(require("../statusCode"));
-const multer_middleware_1 = require("../middleware/multer.middleware");
-const cloudinary_1 = require("../utils/cloudinary");
 const handleErrorResponse_1 = __importDefault(require("../utils/handleErrorResponse"));
+const s3_1 = require("../utils/s3");
+const auth_middleware_1 = require("../middleware/auth.middleware");
 const productRouter = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 const CART_JWT_SECRET_KEY = process.env.CART_JWT_SECRET_KEY;
-productRouter.post("/create/category", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+productRouter.post("/create/category", auth_middleware_1.adminAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const body = req.body;
     const { success } = zod_1.categorySchema.safeParse(body);
     if (!success) {
@@ -52,7 +52,7 @@ productRouter.post("/create/category", (req, res) => __awaiter(void 0, void 0, v
         });
     }
 }));
-productRouter.post("/create/product/:category_id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+productRouter.post("/create/product/:category_id", auth_middleware_1.adminAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const body = req.body;
     const { success } = zod_1.productSchema.safeParse(body);
     if (!success) {
@@ -70,8 +70,7 @@ productRouter.post("/create/product/:category_id", (req, res) => __awaiter(void 
         if (!category) {
             return res.status(statusCode_1.default.BAD_REQUEST).json({
                 success: false,
-                message: "Category not found",
-                categoryId: categoryId,
+                message: "Category not found"
             });
         }
         // Create the product
@@ -101,12 +100,13 @@ productRouter.post("/create/product/:category_id", (req, res) => __awaiter(void 
         });
     }
 }));
-productRouter.post("/create/gallery/:product_id", multer_middleware_1.upload.array("gallery", 8), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const images = req.files;
-    if (!images) {
+productRouter.post("/create/gallery/presigned/:product_id", auth_middleware_1.adminAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const body = req.body;
+    const { success } = zod_1.signedUrlImageSchema.safeParse(body);
+    if (!success) {
         return res.status(statusCode_1.default.BAD_REQUEST).json({
             success: false,
-            message: "No files Uploaded",
+            message: "zod validation Error",
         });
     }
     try {
@@ -122,27 +122,14 @@ productRouter.post("/create/gallery/:product_id", multer_middleware_1.upload.arr
                 message: "Product Not Found",
             });
         }
-        const uploadPromises = images.map((image) => __awaiter(void 0, void 0, void 0, function* () {
-            try {
-                const response = yield (0, cloudinary_1.uploadOnCloudinary)(image.path);
-                yield prisma.productImage.create({
-                    data: {
-                        url: response.url,
-                        url_public_id: response.public_id,
-                        product_id: productId,
-                    },
-                });
-                return response; // Return response after handling it
-            }
-            catch (error) {
-                console.error("Error uploading image:", error);
-                throw new Error("Error uploading image to Cloudinary");
-            }
-        }));
-        const allResponses = yield Promise.all(uploadPromises);
-        res
-            .status(200)
-            .json({ message: "Files uploaded successfully", response: allResponses });
+        const date = new Date().getTime();
+        const key = `productImage/${productId}/${body.imageName}${date}.jpeg`;
+        const url = yield (0, s3_1.uploadImageS3)(key, body.contentType);
+        res.status(200).json({
+            message: "Files uploaded successfully",
+            url: url,
+            key: key
+        });
     }
     catch (error) {
         console.error("Error uploading image:", error);
@@ -153,7 +140,43 @@ productRouter.post("/create/gallery/:product_id", multer_middleware_1.upload.arr
         });
     }
 }));
-productRouter.post('/update/product/:product_id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+productRouter.post('/create/gallery/:product_id', auth_middleware_1.adminAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const product_id = req.params.product_id;
+    const { key } = req.body; // This should be the S3 key returned after upload
+    try {
+        const productExist = yield prisma.product.findUnique({
+            where: {
+                product_id: product_id,
+            },
+        });
+        if (!productExist) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product Not Found',
+            });
+        }
+        const url = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
+        yield prisma.productImage.create({
+            data: {
+                product_id: product_id,
+                url: url,
+                key: key
+            }
+        });
+        res.status(statusCode_1.default.OK).json({
+            success: true,
+            message: "File metadata stored successfully"
+        });
+    }
+    catch (error) {
+        console.error('Error storing image metadata:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal Server Error',
+        });
+    }
+}));
+productRouter.post('/update/product/:product_id', auth_middleware_1.adminAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const body = req.body;
     const { success } = zod_1.pdUpdateSchema.safeParse(body);
     if (!success) {
@@ -194,7 +217,7 @@ productRouter.post('/update/product/:product_id', (req, res) => __awaiter(void 0
         });
     }
 }));
-productRouter.delete('/delete/gallery/:image_id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+productRouter.delete('/delete/gallery/:image_id', auth_middleware_1.adminAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const imageId = req.params.image_id;
         const imageExist = yield prisma.productImage.findUnique({
@@ -208,7 +231,7 @@ productRouter.delete('/delete/gallery/:image_id', (req, res) => __awaiter(void 0
                 message: "Image Not Found",
             });
         }
-        const response = yield (0, cloudinary_1.deleteFromCloudinary)(imageExist.url_public_id);
+        yield (0, s3_1.deleteObjectS3)(imageExist.key);
         yield prisma.productImage.delete({
             where: {
                 image_id: imageId
@@ -216,8 +239,7 @@ productRouter.delete('/delete/gallery/:image_id', (req, res) => __awaiter(void 0
         });
         return res.status(statusCode_1.default.OK).json({
             success: true,
-            message: "Deleted Successfully",
-            response: response
+            message: "Deleted Successfully"
         });
     }
     catch (error) {
@@ -322,6 +344,16 @@ productRouter.get("/:product_id", (req, res) => __awaiter(void 0, void 0, void 0
                 reviews: true,
                 images: true
             }
+        });
+        if (!product) {
+            return res.status(statusCode_1.default.NOT_FOUND).json({
+                success: false,
+                message: "Product Not Found"
+            });
+        }
+        res.status(statusCode_1.default.OK).json({
+            success: true,
+            data: product
         });
     }
     catch (error) {

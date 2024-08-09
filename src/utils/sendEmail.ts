@@ -43,7 +43,7 @@ export const sendEmail = async ({ to, subject, message ,html}: sendEmailProp) =>
     try {
         const sendEmailCommand = new SendEmailCommand(params)
         const result = await ses.send(sendEmailCommand)
-        console.log('Email sent successfully:', result);
+        return result
     } catch (error) {
         console.error('Error sending email:', error);
     }

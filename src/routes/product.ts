@@ -68,8 +68,7 @@ productRouter.post("/create/product/:category_id",adminAuthMiddleware, async (re
     if (!category) {
       return res.status(statusCode.BAD_REQUEST).json({
         success: false,
-        message: "Category not found",
-        categoryId: categoryId,
+        message: "Category not found"
       });
     }
 

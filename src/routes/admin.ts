@@ -14,9 +14,6 @@ import { generateAlphanumericOTP, generateOrUpdateOTP, typeProp } from '../utils
 const adminRouter = Router();
 const prisma = new PrismaClient();
 
-//Forgot Password Route Pending 
-//Email Verification is also Pending
-//Email Validity is Pending
 
 const JWT_SECRET_KEY_ADMIN = process.env.JWT_SECRET_KEY_ADMIN as string;
 if (!JWT_SECRET_KEY_ADMIN) {
@@ -38,7 +35,7 @@ adminRouter.post('/signup', checkAdminsExist, async (req, res) => {
     }
 
     try {
-
+        
         const areAdminsPresent = await prisma.admin.count();
 
         if (!areAdminsPresent && process.env.ALLOW_INITIAL_ADMIN_CREATION === 'true') {
@@ -109,7 +106,7 @@ adminRouter.post('/signup', checkAdminsExist, async (req, res) => {
 
                 const response = await sendEmail(emailData)
 
-                return res.status(statusCode.OK).json({
+                return res.status(statusCode.CREATED).json({
                     success: true,
                     message: `New Admin Created`
                 })
@@ -276,7 +273,6 @@ adminRouter.post('/signin', async (req, res) => {
             message: `Hi, ${admin.full_name} Please Enter the following Verification code to login into your account.  Code : ${code}`,
             html: html
         }
-        console.log(emailData)
 
         const respone = await sendEmail(emailData)
         console.log(respone)

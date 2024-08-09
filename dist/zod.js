@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.a_change_pass_2 = exports.a_change_pass_1 = exports.user_signinSchema = exports.otpVerificationSchema = exports.user_signupSchema = exports.reviewSchema = exports.admin_signinSchema = exports.admin_signupSchema = exports.categorySchema = exports.pdUpdateSchema = exports.productSchema = void 0;
+exports.signedUrlImageSchema = exports.a_change_pass_2 = exports.a_change_pass_1 = exports.user_signinSchema = exports.otpVerificationSchema = exports.user_signupSchema = exports.reviewSchema = exports.admin_signinSchema = exports.admin_signupSchema = exports.categorySchema = exports.pdUpdateSchema = exports.productSchema = void 0;
 const zod_1 = __importDefault(require("zod"));
 exports.productSchema = zod_1.default.object({
     name: zod_1.default.string(),
@@ -55,4 +55,8 @@ exports.a_change_pass_1 = zod_1.default.object({
 exports.a_change_pass_2 = zod_1.default.object({
     oldPassword: zod_1.default.string().min(6),
     newPassword: zod_1.default.string().min(6)
+});
+exports.signedUrlImageSchema = zod_1.default.object({
+    imageName: zod_1.default.string(),
+    contentType: zod_1.default.string()
 });

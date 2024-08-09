@@ -49,7 +49,7 @@ const authMiddleware = (userType) => (req, res, next) => {
         console.error(error);
         res.status(statusCode_1.default.INTERNAL_SERVER_ERROR).json({
             success: false,
-            message: "Internal Error in Authorization  Middleware"
+            message: "Internal Error in Authorization Middleware"
         });
     }
 };
