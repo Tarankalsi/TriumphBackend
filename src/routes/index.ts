@@ -5,6 +5,7 @@ import adminRouter from "./admin";
 import { getObjectURL} from "../utils/s3";
 import { json } from "stream/consumers";
 import { upload } from "../middleware/multer.middleware";
+import { deleteCartSchedular } from "../utils/schedular";
 
 
 const mainRouter = express.Router();
@@ -22,5 +23,7 @@ mainRouter.post('/',async(req,res)=>{
         url : url,
     })
 })
+
+deleteCartSchedular()
 
 export default mainRouter

@@ -151,13 +151,25 @@ model CartItem {
   @@unique([cart_id, product_id])
 }
 
+enum orderStatus {
+  processing
+  shipped
+  delivered
+  cancelled
+  returned
+  }
+
 model Order {
   order_id            String      @id @default(uuid())
   user                User        @relation(fields: [user_id], references: [user_id])
   user_id             String
   order_date          DateTime    @default(now())
+  sub_total           Float
+  shipping_charges    Float
+  tax_amount          Float
+  discount            Float
   total_amount        Float
-  status              String
+  status              orderStatus
   payment_method      String
   shipping_address    Address     @relation(fields: [shipping_address_id], references: [address_id])
   shipping_address_id String
@@ -173,4 +185,5 @@ model OrderItem {
   quantity      Int
   unit_price    Float
   subTotal      Float
+  discount      Float
 }

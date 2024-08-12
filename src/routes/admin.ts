@@ -339,7 +339,7 @@ adminRouter.post('/otp-verification/:admin_id', async (req, res) => {
 
         let token;
         if (response) {
-            token = jwt.sign({ user_id: adminExist.admin_id}, JWT_SECRET_KEY_ADMIN)
+            token = jwt.sign({ admin_id: adminExist.admin_id}, JWT_SECRET_KEY_ADMIN)
         } else {
             return res.status(statusCode.UNAUTHORIZED).json({
                 success: false,

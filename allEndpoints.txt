@@ -47,14 +47,17 @@ Done
 --> send credential of new admin into their email
 --> Convert cloudinary to aws s3
 --> add admin authentification middleware in routes
-
+--> add features like remove cart after few days
 
 
 Pending  
---> Email Verification
---> Payment Integration
 --> Serverless Framework integration and aws lambda
 --> fetch all data important details specifically (like user, product etc)
 --> Add search bar api route
 --> Add AWS rds      // will add url of instance at the end
---> add features like remove cart after few days
+--> Create orders 
+--> Integrate with shipping partner shiprocket
+--> when order placed reduced items from stock 
+--> Payment Integration
+--> Add Cash on Delivery feature   (don't know first discuss)
+--> Add Feature when product is delivered to customer change the status
