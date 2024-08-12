@@ -56,7 +56,7 @@ Pending
 --> Add search bar api route
 --> Add AWS rds      // will add url of instance at the end
 --> Create orders 
---> Integrate with shipping partner shiprocket
+--> Integrate with shipping partner shiprockets
 --> when order placed reduced items from stock 
 --> Payment Integration
 --> Add Cash on Delivery feature   (don't know first discuss)

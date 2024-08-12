@@ -49,7 +49,7 @@ productRouter.post("/create/category",adminAuthMiddleware, async (req, res) => {
 
 productRouter.post("/create/product/:category_id",adminAuthMiddleware, async (req: Request, res: Response) => {
   const body = req.body;
-
+  
   const { success } = productSchema.safeParse(body);
 
   if (!success) {
@@ -78,7 +78,7 @@ productRouter.post("/create/product/:category_id",adminAuthMiddleware, async (re
         name: body.name,
         description: body.description,
         price: body.price,
-        availablity: body.availablity,
+        availability: body.availability,
         SKU: body.SKU,
         color: body.color,
         category_id: req.params.category_id,
@@ -309,13 +309,12 @@ productRouter.get("/category/:category_id", async (req, res) => {
         description: true,
         price: true,
         discount_price: true,
-        availablity: true,
+        availability: true,
         SKU: true,
         color: true,
         category_id: true,
         reviews: true,
-        images: true,
-        CartItem: true
+        images: true
       }
     })
 
@@ -379,7 +378,7 @@ productRouter.get("/:product_id", async (req, res) => {
         description: true,
         price: true,
         discount_price: true,
-        availablity: true,
+        availability: true,
         SKU: true,
         color: true,
         category_id: true,

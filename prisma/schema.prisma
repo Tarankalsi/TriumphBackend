@@ -88,15 +88,13 @@ model Product {
   description    String
   price          Float
   discount_price Float?
-  availablity    Int      @default(0)
+  availability    Int      @default(0)
   SKU            String   @unique
   color          String
   category       Category @relation(fields: [category_id], references: [category_id])
   category_id    String
   // variants      ProductVariants[]
-
   reviews Review[]
-
   images    ProductImage[]
   CartItem  CartItem[]
   OrderItem OrderItem[]
