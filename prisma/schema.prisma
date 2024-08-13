@@ -83,30 +83,84 @@ model Category {
 
 // Define Product entity
 model Product {
-  product_id     String   @id @default(uuid())
-  name           String
-  description    String
-  price          Float
-  discount_price Float?
-  availability    Int      @default(0)
-  SKU            String   @unique
-  color          String
-  category       Category @relation(fields: [category_id], references: [category_id])
-  category_id    String
+  product_id              String   @id @default(uuid())
+  category                Category @relation(fields: [category_id], references: [category_id])
+  category_id             String
+  name                    String
+  description             String
+  price                   Float
+  discount_price          Float?
+  availability            Int      @default(0)
+  SKU                     String   @unique
+  brand                   String   @default("Triumph Lights")
+  material                String?
+  shape                   String?
+  design_style            String?
+  fixture_form            String?
+  ideal_for               String?
+  power_source            String?
+  installation            String?
+  shade_material          String?
+  voltage                 String?
+  light_color             String?
+  light_source            String?
+  light_color_temperature String?
+  included_components     String?
+  lighting_method         String?
+  item_weight             String?
+  height                  String?
+  length                  String?
+  width                   String?
+  quantity                String?
+  power_rating            String?
+  brightness              String?
+  controller_type         String?
+  switch_type             String?
+  switch_mounting         String?
+  mounting_type           String?
+  fixture_type            String?
+  assembly_required       String?
+  primary_material        String?
+  number_of_light_sources String?
+  surge_protection        String?
+  shade_color             String?
+  key_features            String?
+  batteries               String?
+  embellishment           String?
+
+  colors        ProductColor[]
   // variants      ProductVariants[]
-  reviews Review[]
-  images    ProductImage[]
-  CartItem  CartItem[]
-  OrderItem OrderItem[]
+  reviews       Review[]
+  images        ProductImage[]
+  CartItem      CartItem[]
+  OrderItem     OrderItem[]
+
+}
+
+model ProductColor {
+  product_id String
+  color_id   String
+
+  product Product @relation(fields: [product_id], references: [product_id])
+  color   Color   @relation(fields: [color_id], references: [color_id])
+
+  @@id([product_id, color_id])
+}
+
+model Color {
+  color_id     String         @id @default(uuid())
+  color_name   String
+  hex          String @unique
+  products   ProductColor[]
 }
 
 // Define Prodcut image entity
 model ProductImage {
-  image_id      String  @id @default(uuid())
-  key           String
-  url           String
-  product       Product @relation(fields: [product_id], references: [product_id])
-  product_id    String
+  image_id   String  @id @default(uuid())
+  key        String
+  url        String
+  product    Product @relation(fields: [product_id], references: [product_id])
+  product_id String
 }
 
 model Review {
@@ -122,11 +176,11 @@ model Review {
 }
 
 model ReviewImage {
-  image_id      String @id @default(uuid())
-  key           String
-  url           String
-  review        Review @relation(fields: [review_id], references: [review_id])
-  review_id     String
+  image_id  String @id @default(uuid())
+  key       String
+  url       String
+  review    Review @relation(fields: [review_id], references: [review_id])
+  review_id String
 }
 
 model Cart {
@@ -155,7 +209,7 @@ enum orderStatus {
   delivered
   cancelled
   returned
-  }
+}
 
 model Order {
   order_id            String      @id @default(uuid())

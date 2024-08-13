@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 const CART_JWT_SECRET_KEY = process.env.CART_JWT_SECRET_KEY as string
 
 
-productRouter.post("/create/category",adminAuthMiddleware, async (req, res) => {
+productRouter.post("/create/category", adminAuthMiddleware, async (req, res) => {
   const body = req.body;
 
   const { success } = categorySchema.safeParse(body);
@@ -47,15 +47,16 @@ productRouter.post("/create/category",adminAuthMiddleware, async (req, res) => {
   }
 });
 
-productRouter.post("/create/product/:category_id",adminAuthMiddleware, async (req: Request, res: Response) => {
+productRouter.post("/create/product/:category_id", adminAuthMiddleware, async (req: Request, res: Response) => {
   const body = req.body;
-  
-  const { success } = productSchema.safeParse(body);
+
+  const { success, error, data } = productSchema.safeParse(body);
 
   if (!success) {
     return res.status(statusCode.BAD_REQUEST).json({
       success: false,
       message: "zod validation Error",
+      error: error.errors || error
     });
   }
   try {
@@ -64,7 +65,7 @@ productRouter.post("/create/product/:category_id",adminAuthMiddleware, async (re
     const category = await prisma.category.findUnique({
       where: { category_id: categoryId },
     });
-    
+
     if (!category) {
       return res.status(statusCode.BAD_REQUEST).json({
         success: false,
@@ -72,18 +73,42 @@ productRouter.post("/create/product/:category_id",adminAuthMiddleware, async (re
       });
     }
 
+    const { colors, ...productData } = data;
+
     // Create the product
     const product = await prisma.product.create({
       data: {
-        name: body.name,
-        description: body.description,
-        price: body.price,
-        availability: body.availability,
-        SKU: body.SKU,
-        color: body.color,
+        ...productData,
         category_id: req.params.category_id,
+
       },
     });
+
+    if (colors) {
+      for (const clr of colors) {
+        let existingColor = await prisma.color.findUnique({
+          where: { hex: clr.hex },
+        });
+        
+
+        if (!existingColor) {
+          existingColor = await prisma.color.create({
+            data: {
+              color_name: clr.color_name,
+              hex: clr.hex,
+            },
+          });
+     
+        }
+
+        await prisma.productColor.create({
+          data: {
+            product_id: product.product_id,
+            color_id: existingColor.color_id,
+          },
+        });
+      }
+    }
 
     return res.status(statusCode.OK).json({
       success: true,
@@ -101,18 +126,18 @@ productRouter.post("/create/product/:category_id",adminAuthMiddleware, async (re
 }
 );
 
-productRouter.post("/create/gallery/presigned/:product_id",adminAuthMiddleware, async (req, res) => {
+productRouter.post("/create/gallery/presigned/:product_id", adminAuthMiddleware, async (req, res) => {
 
   const body = req.body
-  
-  const {success} = signedUrlImageSchema.safeParse(body)
-  
+
+  const { success } = signedUrlImageSchema.safeParse(body)
+
   if (!success) {
     return res.status(statusCode.BAD_REQUEST).json({
       success: false,
       message: "zod validation Error",
     });
-  } 
+  }
 
 
   try {
@@ -136,8 +161,8 @@ productRouter.post("/create/gallery/presigned/:product_id",adminAuthMiddleware, 
 
     const url = await uploadImageS3(key, body.contentType)
 
-    res.status(200).json({  
-      message: "Files uploaded successfully", 
+    res.status(200).json({
+      message: "Files uploaded successfully",
       url: url,
       key: key
     });
@@ -153,7 +178,7 @@ productRouter.post("/create/gallery/presigned/:product_id",adminAuthMiddleware, 
 }
 );
 
-productRouter.post('/create/gallery/:product_id',adminAuthMiddleware, async (req, res) => {
+productRouter.post('/create/gallery/:product_id', adminAuthMiddleware, async (req, res) => {
   const product_id = req.params.product_id
   const { key } = req.body; // This should be the S3 key returned after upload
   try {
@@ -194,54 +219,104 @@ productRouter.post('/create/gallery/:product_id',adminAuthMiddleware, async (req
   }
 })
 
-productRouter.post('/update/product/:product_id',adminAuthMiddleware, async (req, res) => {
-  const body = req.body
+productRouter.post('/update/product/:product_id', adminAuthMiddleware, async (req, res) => {
+  const body = req.body;
 
-  const { success } = pdUpdateSchema.safeParse(body)
+  const { success, error, data } = pdUpdateSchema.safeParse(body);
 
   if (!success) {
     return res.status(statusCode.BAD_REQUEST).json({
       success: false,
-      message: "zod validation error"
-    })
+      message: "Zod validation error",
+      error: error.errors || error,
+    });
   }
 
   try {
     const productExist = await prisma.product.findUnique({
       where: {
-        product_id: req.params.product_id
-      }
-    })
+        product_id: req.params.product_id,
+      },
+    });
 
     if (!productExist) {
       return res.status(statusCode.NOT_FOUND).json({
         success: false,
-        message: "Product Not Found"
-      })
+        message: "Product Not Found",
+      });
     }
 
+    // Extract the color field if it exists
+    const { colors, ...productData } = data;
+
+    // Update the product details (excluding color)
     const product = await prisma.product.update({
       where: {
-        product_id: req.params.product_id
+        product_id: req.params.product_id,
       },
-      data: body
-    })
+      data: productData,
+    });
+
+    // If color is provided, update the color separately
+    if (colors) {
+      // Loop through each color and either link an existing one or create a new one
+      for (const col of colors) {
+        let existingColor = await prisma.color.findUnique({
+          where: { hex: col.hex },
+        });
+        console.log("Existing color find:", existingColor?.color_name)
+
+        if (!existingColor) {
+          // Create new color if it doesn't exist
+          existingColor = await prisma.color.create({
+            data: {
+              color_name: col.color_name,
+              hex: col.hex,
+            },
+          });
+          console.log("existing color didn't find so we create new:", existingColor)
+        }
+
+        // Check if the relation already exists between the product and the color
+        const colorLinkExists = await prisma.productColor.findUnique({
+          where: {
+            product_id_color_id: {
+              product_id: product.product_id,
+              color_id: existingColor.color_id,
+            },
+          },
+        });
+        console.log("Color already link with this product:", colorLinkExists)
+        if (!colorLinkExists) {
+          // Create the relation if it doesn't exist
+          await prisma.productColor.create({
+            data: {
+              product_id: product.product_id,
+              color_id: existingColor.color_id,
+            },
+          });
+          console.log("Color succesffully link with this product")
+        }
+      }
+    }
+
 
     return res.status(statusCode.OK).json({
       success: true,
       message: "Product Updated Successfully",
-      product: product
-    })
+      product: product,
+    });
   } catch (error) {
     return res.status(statusCode.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: "Internal Server Error",
-      error: error
-    })
+      error: error,
+    });
   }
-})
+});
 
-productRouter.delete('/delete/gallery/:image_id',adminAuthMiddleware, async (req, res) => {
+
+productRouter.delete('/delete/gallery/:image_id', adminAuthMiddleware, async (req, res) => {
 
   try {
     const imageId = req.params.image_id
@@ -260,13 +335,13 @@ productRouter.delete('/delete/gallery/:image_id',adminAuthMiddleware, async (req
     }
 
     await deleteObjectS3(imageExist.key)
-    
+
     await prisma.productImage.delete({
       where: {
         image_id: imageId
       }
     })
-    
+
     return res.status(statusCode.OK).json({
       success: true,
       message: "Deleted Successfully"
@@ -305,14 +380,50 @@ productRouter.get("/category/:category_id", async (req, res) => {
       },
       select: {
         product_id: true,
+        category_id: true,
         name: true,
         description: true,
         price: true,
         discount_price: true,
         availability: true,
         SKU: true,
-        color: true,
-        category_id: true,
+        brand: true,
+        material: true,
+        shape: true,
+        design_style: true,
+        fixture_form: true,
+        ideal_for: true,
+        power_source: true,
+        installation: true,
+        shade_material: true,
+        voltage: true,
+        light_color: true,
+        light_source: true,
+        light_color_temperature: true,
+        included_components: true,
+        lighting_method: true,
+        item_weight: true,
+        height: true,
+        length: true,
+        width: true,
+        quantity: true,
+        power_rating: true,
+        brightness: true,
+        controller_type: true,
+        switch_type: true,
+        switch_mounting: true,
+        mounting_type: true,
+        fixture_type: true,
+        assembly_required: true,
+        primary_material: true,
+        number_of_light_sources: true,
+        surge_protection: true,
+        shade_color: true,
+        key_features: true,
+        batteries: true,
+        embellishment: true,
+
+        colors: true,
         reviews: true,
         images: true
       }
@@ -380,7 +491,7 @@ productRouter.get("/:product_id", async (req, res) => {
         discount_price: true,
         availability: true,
         SKU: true,
-        color: true,
+        colors: true,
         category_id: true,
         reviews: true,
         images: true
@@ -389,14 +500,14 @@ productRouter.get("/:product_id", async (req, res) => {
 
     if (!product) {
       return res.status(statusCode.NOT_FOUND).json({
-        success : false,
-        message : "Product Not Found"
+        success: false,
+        message: "Product Not Found"
       })
     }
 
     res.status(statusCode.OK).json({
-      success : true,
-      data : product
+      success: true,
+      data: product
     })
   } catch (error) {
     return handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
