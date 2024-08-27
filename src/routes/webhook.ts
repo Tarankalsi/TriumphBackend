@@ -3,7 +3,7 @@ import express from "express"
 const webhookRouter = express.Router();
 
 
-webhookRouter.post('/shiprocket/status', (req, res) => {
+webhookRouter.post('/status', (req, res) => {
     try {
       // Extract the event data from the request body
       const event = req.body;
