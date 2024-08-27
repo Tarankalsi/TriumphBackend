@@ -1,8 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import cron from "node-cron";
 import handleErrorResponse from "./handleErrorResponse";
+import { refreshToken } from "./refreshShiprocketToken";
+import axios from "axios";
 
 const prisma = new PrismaClient();
+
 
 export const deleteCartSchedular = () => {
     cron.schedule("0 0 * * *", async () => {
@@ -43,3 +46,16 @@ export const deleteCartSchedular = () => {
         }
     })
 }
+
+
+const TOKEN_REFRESH_INTERVAL_DAYS = 9;
+// Schedule the refresh token function to run every 9 days
+cron.schedule(`0 0 */${TOKEN_REFRESH_INTERVAL_DAYS} * *`, async () => {
+    console.log('Refreshing Shiprocket API token...');
+    await refreshToken();
+    console.log('Token refresh scheduler set up.');
+  });
+  
+  
+
+

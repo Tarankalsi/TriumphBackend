@@ -366,6 +366,16 @@ adminRouter.post('/otp-verification/:admin_id', async (req, res) => {
     }
 })
 
+
+adminRouter.get('/validate-token', adminAuthMiddleware, (req, res) => {
+
+    res.json({ success: true, message: 'Token is valid.', admin: req.admin_id });
+});
+
+
+
+
+//Practice route
 adminRouter.post('/sendEmail', async (req,res)=>{
     const details = {
         to : "tarankhalsa3412@gmail.com",
@@ -385,8 +395,6 @@ adminRouter.post('/sendEmail', async (req,res)=>{
         handleErrorResponse(res,error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
     }
 })
-
-
 
 
 

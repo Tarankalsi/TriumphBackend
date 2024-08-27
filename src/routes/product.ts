@@ -89,7 +89,7 @@ productRouter.post("/create/product/:category_id", adminAuthMiddleware, async (r
         let existingColor = await prisma.color.findUnique({
           where: { hex: clr.hex },
         });
-        
+
 
         if (!existingColor) {
           existingColor = await prisma.color.create({
@@ -98,7 +98,7 @@ productRouter.post("/create/product/:category_id", adminAuthMiddleware, async (r
               hex: clr.hex,
             },
           });
-     
+
         }
 
         await prisma.productColor.create({
@@ -264,7 +264,7 @@ productRouter.post('/update/product/:product_id', adminAuthMiddleware, async (re
         let existingColor = await prisma.color.findUnique({
           where: { hex: col.hex },
         });
-        console.log("Existing color find:", existingColor?.color_name)
+        
 
         if (!existingColor) {
           // Create new color if it doesn't exist
@@ -274,7 +274,7 @@ productRouter.post('/update/product/:product_id', adminAuthMiddleware, async (re
               hex: col.hex,
             },
           });
-          console.log("existing color didn't find so we create new:", existingColor)
+          
         }
 
         // Check if the relation already exists between the product and the color
@@ -286,7 +286,7 @@ productRouter.post('/update/product/:product_id', adminAuthMiddleware, async (re
             },
           },
         });
-        console.log("Color already link with this product:", colorLinkExists)
+        
         if (!colorLinkExists) {
           // Create the relation if it doesn't exist
           await prisma.productColor.create({
@@ -295,7 +295,7 @@ productRouter.post('/update/product/:product_id', adminAuthMiddleware, async (re
               color_id: existingColor.color_id,
             },
           });
-          console.log("Color succesffully link with this product")
+          
         }
       }
     }
@@ -384,7 +384,7 @@ productRouter.get("/category/:category_id", async (req, res) => {
         name: true,
         description: true,
         price: true,
-        discount_price: true,
+        discount_percent: true,
         availability: true,
         SKU: true,
         brand: true,
@@ -422,10 +422,10 @@ productRouter.get("/category/:category_id", async (req, res) => {
         key_features: true,
         batteries: true,
         embellishment: true,
-
         colors: true,
         reviews: true,
-        images: true
+        images: true,
+        category:true
       }
     })
 
@@ -475,44 +475,7 @@ productRouter.get("/categories", async (req, res) => {
   }
 })
 
-productRouter.get("/:product_id", async (req, res) => {
-  const productId = req.params.product_id
 
-  try {
-    const product = await prisma.product.findUnique({
-      where: {
-        product_id: productId
-      },
-      select: {
-        product_id: true,
-        name: true,
-        description: true,
-        price: true,
-        discount_price: true,
-        availability: true,
-        SKU: true,
-        colors: true,
-        category_id: true,
-        reviews: true,
-        images: true
-      }
-    })
-
-    if (!product) {
-      return res.status(statusCode.NOT_FOUND).json({
-        success: false,
-        message: "Product Not Found"
-      })
-    }
-
-    res.status(statusCode.OK).json({
-      success: true,
-      data: product
-    })
-  } catch (error) {
-    return handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
-  }
-})
 
 
 interface cartTokenPayload {
@@ -598,7 +561,7 @@ productRouter.post('/addToCart/:product_id', async (req, res) => {
         where: {
           cart_id_product_id: {
             cart_id: decoded.cart_id,
-            product_id: product_id
+            product_id: product_id,
           }
         },
         data: {
@@ -610,7 +573,8 @@ productRouter.post('/addToCart/:product_id', async (req, res) => {
         data: {
           product_id: product_id,
           cart_id: decoded.cart_id,
-          quantity: req.body.quantity || 1
+          quantity: req.body.quantity,
+          color: req.body.color
         }
       });
     }
@@ -656,5 +620,360 @@ productRouter.get("/cart", async (req, res) => {
     handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
   }
 })
+
+productRouter.get('/search', async (req, res) => {
+  const searchQuery = req.query.searchQuery as string;
+
+  
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: searchQuery,
+              mode: 'insensitive', // Case-insensitive search
+            },
+          },
+          {
+            description: {
+              contains: searchQuery,
+              mode: 'insensitive',
+            },
+          },
+          {
+            category: {
+              name: {
+                contains: searchQuery,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            colors: {
+              some: {
+                color: {
+                  color_name: {
+                    contains: searchQuery,
+                    mode: 'insensitive',
+                  }
+
+                },
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        category: true,
+        colors: {
+          include:{
+            color:true
+          }
+        },
+        images: true,
+        reviews: true,
+      },
+    });
+
+    res.status(statusCode.OK).json({
+      success: true,
+      data: products,
+    });
+  } catch (error) {
+    handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR);
+  }
+});
+
+
+productRouter.get("/colors", async (req, res) => {
+  try {
+
+    const colors = await prisma.color.findMany()
+
+    if (colors.length === 0 || !colors) {
+      return res.status(statusCode.NOT_FOUND).json({
+        success: false,
+        message: "Colors Not Exist"
+      });
+    }
+    return res.status(statusCode.OK).json({
+      success: true,
+      colors: colors
+    })
+  } catch (error) {
+    return handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+    // return res.status(statusCode.INTERNAL_SERVER_ERROR).json({
+    //   success : false,
+    //   message : "Internal Server Error"
+    // })
+  }
+})
+
+productRouter.get("/all", async (req, res) => {
+  try {
+    const products = await prisma.product.findMany({
+      select: {
+        product_id: true,
+        category_id: true,
+        name: true,
+        description: true,
+        price: true,
+        discount_percent: true,
+        availability: true,
+        SKU: true,
+        brand: true,
+        material: true,
+        shape: true,
+        design_style: true,
+        fixture_form: true,
+        ideal_for: true,
+        power_source: true,
+        installation: true,
+        shade_material: true,
+        voltage: true,
+        light_color: true,
+        light_source: true,
+        light_color_temperature: true,
+        included_components: true,
+        lighting_method: true,
+        item_weight: true,
+        height: true,
+        length: true,
+        width: true,
+        quantity: true,
+        power_rating: true,
+        brightness: true,
+        controller_type: true,
+        switch_type: true,
+        switch_mounting: true,
+        mounting_type: true,
+        fixture_type: true,
+        assembly_required: true,
+        primary_material: true,
+        number_of_light_sources: true,
+        surge_protection: true,
+        shade_color: true,
+        key_features: true,
+        batteries: true,
+        embellishment: true,
+        category: {
+          select: {
+            name: true,
+          },
+        },
+        colors: {
+          select: {
+            color: true, // Include the related color details
+          },
+        },
+        reviews: true,
+        images: true,
+      },
+    });
+
+    if (!products || products.length === 0) {
+      return res.status(statusCode.NOT_FOUND).json({
+        success: false,
+        message: "No products found",
+      });
+    }
+
+    res.status(statusCode.OK).json({
+      success: true,
+      products: products,
+    });
+  } catch (error) {
+    return handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR);
+  }
+});
+
+productRouter.get("/all/colors", async (req, res) => {
+  try {
+    
+    const colors = await prisma.color.findMany()
+
+    res.status(statusCode.OK).json({
+      success: true,
+      colors: colors,
+    });
+  } catch (error) {
+    return handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR);
+  }
+});
+
+productRouter.get("/:product_id", async (req, res) => {
+  const productId = req.params.product_id
+
+  try {
+    const product = await prisma.product.findUnique({
+      where: {
+        product_id: productId
+      },
+      select: {
+        product_id: true,
+        category_id: true,
+        name: true,
+        description: true,
+        price: true,
+        discount_percent: true,
+        availability: true,
+        SKU: true,
+        brand: true,
+        material: true,
+        shape: true,
+        design_style: true,
+        fixture_form: true,
+        ideal_for: true,
+        power_source: true,
+        installation: true,
+        shade_material: true,
+        voltage: true,
+        light_color: true,
+        light_source: true,
+        light_color_temperature: true,
+        included_components: true,
+        lighting_method: true,
+        item_weight: true,
+        height: true,
+        length: true,
+        width: true,
+        quantity: true,
+        power_rating: true,
+        brightness: true,
+        controller_type: true,
+        switch_type: true,
+        switch_mounting: true,
+        mounting_type: true,
+        fixture_type: true,
+        assembly_required: true,
+        primary_material: true,
+        number_of_light_sources: true,
+        surge_protection: true,
+        shade_color: true,
+        key_features: true,
+        batteries: true,
+        embellishment: true,
+
+        colors: {
+          include: {
+            color: true, // Include the related color details
+          },
+        },
+        reviews: true,
+        images: true
+      }
+    })
+
+    if (!product) {
+      return res.status(statusCode.NOT_FOUND).json({
+        success: false,
+        message: "Product Not Found"
+      })
+    }
+
+    res.status(statusCode.OK).json({
+      success: true,
+      data: product
+    })
+  } catch (error) {
+    return handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+  }
+})
+
+
+productRouter.delete("/delete/:product_id", adminAuthMiddleware, async (req, res) => {
+  const product_id = req.params.product_id;
+
+  try {
+    const productExist = await prisma.product.findUnique({
+      where: {
+        product_id: product_id
+      },
+      select: {
+        product_id: true,
+        colors: true,
+        reviews: true,
+        images: true,
+        CartItem: true,
+        OrderItem: true
+      }
+    });
+
+    if (!productExist) {
+      return res.status(statusCode.NOT_FOUND).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    // Begin a transaction
+    await prisma.$transaction(async (transaction) => {
+      // Delete colors associated with the product
+      if (productExist.colors.length > 0) {
+        await transaction.productColor.deleteMany({
+          where: {
+            product_id: product_id
+          }
+        });
+      }
+
+      // Delete images associated with the product
+      if (productExist.images.length > 0) {
+        for (const image of productExist.images) {
+          const response = await deleteObjectS3(image.key);
+          if (!response.success) {
+            throw new Error('Failed to delete image from S3');
+          }
+        }
+
+        await transaction.productImage.deleteMany({
+          where: {
+            product_id: product_id
+          }
+        });
+      }
+
+      // Delete cart items associated with the product
+      if (productExist.CartItem) {
+        await transaction.cartItem.deleteMany({
+          where: {
+            product_id: product_id
+          }
+        });
+      }
+
+      // Delete order items associated with the product
+      if (productExist.OrderItem) {
+        await transaction.orderItem.deleteMany({
+          where: {
+            product_id: product_id
+          }
+        });
+      }
+
+      // Finally, delete the product itself
+      await transaction.product.delete({
+        where: {
+          product_id: product_id
+        }
+      });
+    });
+
+    return res.status(statusCode.OK).json({
+      success: true,
+      message: "Product deleted successfully"
+    });
+
+  } catch (error) {
+    return handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR);
+  }
+});
+
+
+
+
+
+
 
 export default productRouter;

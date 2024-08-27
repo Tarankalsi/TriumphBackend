@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Router, Request, Response } from "express";
-import { categorySchema, otpVerificationSchema, pdUpdateSchema, productSchema, reviewSchema, signedUrlImageSchema, user_signinSchema, user_signupSchema } from "../zod";
+import { addressSchema, categorySchema, otpVerificationSchema, pdUpdateSchema, productSchema, reviewSchema, signedUrlImageSchema, user_signinSchema, user_signupSchema } from "../zod";
 import { PrismaClient } from "@prisma/client";
 import statusCode from "../statusCode";
 import handleErrorResponse, { CustomError } from "../utils/handleErrorResponse";
@@ -41,7 +41,7 @@ userRouter.post('/signup', async (req, res) => {
         return res.status(statusCode.BAD_REQUEST).json({
             success: false,
             message: "Zod verification failed",
-            error: error.message
+            error: error?.issues
         })
     }
 
@@ -102,7 +102,7 @@ userRouter.post('/signin', async (req, res) => {
         return res.status(statusCode.BAD_REQUEST).json({
             success: false,
             message: "Zod verification failed",
-            error: error.message
+            error: error?.issues
         })
     }
 
@@ -153,14 +153,12 @@ userRouter.post('/otp-verification/:user_id', async (req, res) => {
     const user_id = req.params.user_id
     const { success, error } = otpVerificationSchema.safeParse(body)
     const now = new Date();
-    console.log(body)
-    console.log(req.params.user_id)
-    console.log(user_id)
+
     if (!success) {
         return res.status(statusCode.BAD_REQUEST).json({
             success: false,
             message: "Zod verification failed",
-            error: error.message
+            error: error?.issues
         })
     }
 
@@ -220,6 +218,143 @@ userRouter.post('/otp-verification/:user_id', async (req, res) => {
     }
 })
 
+userRouter.get('/data', userAuthMiddleware, async (req, res) => {
+    const user_id = req.user_id
+    if (!user_id) {
+        return res.status(statusCode.BAD_REQUEST).json({
+            success: false,
+            message: "User ID is required"
+        });
+    }
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                user_id: user_id
+            },
+            select: {
+                user_id: true,
+                full_name: true,
+                email: true,
+                phone_number: true,
+                address:true,
+                cart:true
+            }
+        })
+        
+        if (!user) {
+            return res.status(statusCode.OK).json({
+                success: false,
+                message: "User Not Found"
+            })
+        }
+        return res.status(statusCode.OK).json({
+            success: true,
+            data: user
+        })
+    } catch (error) {
+        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+    }
+})
+
+userRouter.post('/create/address',userAuthMiddleware, async (req, res) => {
+    const body = req.body
+    const user_id = req.user_id
+    const { success, error } = addressSchema.safeParse(body)
+
+    if (!success) {
+        return res.status(statusCode.BAD_REQUEST).json({
+            success: false,
+            message: "Zod verification failed",
+            error: error?.issues
+        })
+    }
+
+    if (!user_id) {
+        return res.status(statusCode.BAD_REQUEST).json({
+            success: false,
+            message: "User ID is required"
+        });
+    }
+
+    try {
+        
+        const newAddress = await prisma.address.create({
+            data: {
+                user_id: user_id,
+                street: body.street,
+                city: body.city,
+                state: body.state,
+                postal_code: body.postal_code,
+                country: body.country
+            }
+        })
+
+        if (body.phone_number) {
+            await prisma.user.update({
+                where: {
+                    user_id: user_id
+                },
+                data: {
+                    phone_number: body.phone_number
+                }
+            })
+        }
+        
+
+        return res.status(statusCode.OK).json({
+            success: true,
+            message: "Address created and user's phone number updated",
+            address:newAddress
+        })
+    } catch (error) {
+        console.error('Error creating cart:', error);
+        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+    }
+})
+
+userRouter.delete(`/delete/address/:address_id`,userAuthMiddleware,async (req,res)=>{
+    const address_id = req.params.address_id
+    const user_id = req.user_id
+
+    if (!user_id) {
+        return res.status(statusCode.BAD_REQUEST).json({
+            success: false,
+            message: "User ID is required"
+        });
+    }
+    try {
+        const addressExist = await prisma.address.findUnique({
+            where: {
+                address_id: address_id,
+                user_id: user_id
+            }
+        })
+
+        if (!addressExist) {
+            return res.status(statusCode.NOT_FOUND).json({
+                success : false,
+                message: "Address Not Found"
+            })
+        }
+
+
+        await prisma.address.delete({
+            where: {
+                address_id: address_id,
+                user_id: user_id
+            }
+        })
+
+        return res.status(statusCode.OK).json({
+            success: true,
+            message: "Address deleted"
+        })
+
+    } catch (error) {
+        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+    }
+})
 
 // Update behaviour when user is logged in
 userRouter.post('/create/cart', userIsLoggedIn, async (req, res) => {
@@ -251,11 +386,49 @@ userRouter.post('/create/cart', userIsLoggedIn, async (req, res) => {
     }
 })
 
+userRouter.put('/add-user-id/:cart_id', userAuthMiddleware, async (req, res) => {
+    const user_id = req.user_id
+    const cart_id = req.params.cart_id
+    try {
+        const cartExist = await prisma.cart.findUnique({
+            where:{
+                cart_id: cart_id
+            }
+        })
+
+
+        if (!cartExist) {
+            return res.status(statusCode.NOT_FOUND).json({
+                success: false,
+                message: "Cart Not Found"
+            })
+        }
+
+        await prisma.cart.update({
+            where: {
+                cart_id: cart_id
+            },
+            data: {
+                user_id: user_id
+            }
+        })
+
+        return res.status(statusCode.OK).json({
+            success: true,
+            message: "User added to cart successfully"
+        })
+
+    } catch (error) {
+        console.log(error)
+        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+    }
+
+    
+})
 // Update behaviour when user is logged in
 userRouter.post('/addToCart/:product_id', async (req, res) => {
     const product_id = req.params.product_id
     const cartToken = req.headers['cart-token'] as string
-
 
     try {
         let decoded
@@ -308,7 +481,7 @@ userRouter.post('/addToCart/:product_id', async (req, res) => {
                 where: {
                     cart_id_product_id: {
                         cart_id: decoded.cart_id,
-                        product_id: product_id
+                        product_id: product_id,
                     }
                 },
                 data: {
@@ -320,7 +493,8 @@ userRouter.post('/addToCart/:product_id', async (req, res) => {
                 data: {
                     product_id: product_id,
                     cart_id: decoded.cart_id,
-                    quantity: req.body.quantity || 1
+                    quantity: req.body.quantity,
+                    color: req.body.color
                 }
             });
         }
@@ -333,6 +507,103 @@ userRouter.post('/addToCart/:product_id', async (req, res) => {
         console.log(error)
         handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
     }
+})
+
+userRouter.put('/update/cart/quantity/:cart_item_id', async (req, res) => {
+    const cart_item_id = req.params.cart_item_id
+    const cartToken = req.headers['cart-token'] as string
+    const { quantity } = req.body;
+
+    try {
+        let decoded;
+        if (cartToken) {
+            decoded = jwt.verify(cartToken, CART_JWT_SECRET_KEY) as cartTokenPayload;
+        } else {
+            return res.status(statusCode.BAD_REQUEST).json({
+                success: false,
+                message: "Cart Token is not provided"
+            });
+        }
+
+        // Validate the quantity
+        if (quantity <= 0) {
+            return res.status(statusCode.BAD_REQUEST).json({
+                success: false,
+                message: "Quantity must be greater than zero"
+            });
+        }
+
+        // Check if the cart item exists
+        const cartItem = await prisma.cartItem.findUnique({
+            where: {
+                cart_item_id: cart_item_id
+            }
+        });
+
+        if (!cartItem) {
+            return res.status(statusCode.NOT_FOUND).json({
+                success: false,
+                message: "Cart Item Not Found"
+            });
+        }
+
+       
+
+
+
+        // Check if the cart associated with the item exists and matches the user's cart
+        const cartExist = await prisma.cart.findUnique({
+            where: {
+                cart_id: decoded.cart_id
+            }
+        });
+
+        if (!cartExist || cartItem.cart_id !== decoded.cart_id) {
+            return res.status(statusCode.NOT_FOUND).json({
+                success: false,
+                message: "Cart Not Found or Cart Item does not belong to this cart"
+            });
+        }
+
+        const product = await prisma.product.findUnique({
+            where: {
+                product_id: cartItem.product_id
+            }
+        });
+        if (!product) {
+            return res.status(statusCode.NOT_FOUND).json({
+                success: false,
+                message: "Product Not Found"
+            });
+        }
+
+        // Check if the new quantity exceeds the product's availability
+        if (quantity > product.availability) {
+            return res.status(statusCode.BAD_REQUEST).json({
+                success: false,
+                message: "Quantity exceeds stock limit"
+            });
+        }
+
+        // Update the quantity of the cart item
+        await prisma.cartItem.update({
+            where: {
+                cart_item_id: cart_item_id
+            },
+            data: {
+                quantity: quantity
+            }
+        });
+
+        return res.status(statusCode.OK).json({
+            success: true,
+            message: "Cart Item Quantity Updated Successfully"
+        });
+
+    } catch (error) {
+        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR);
+    }
+
 })
 
 // Update behaviour when user is logged in
@@ -355,7 +626,11 @@ userRouter.get("/cart", async (req, res) => {
             }, select: {
                 cart_id: true,
                 user_id: true,
-                cartItems: true
+                cartItems:{
+                    include: {
+                        product: true, // This will include all fields of the related Product model
+                      },
+                }
             }
         })
 
@@ -390,7 +665,7 @@ userRouter.post('/create/review/:product_id', userAuthMiddleware, async (req, re
     if (!success) {
         return res.status(statusCode.BAD_REQUEST).json({
             success: false,
-            message: error.message
+            message: error?.issues
         })
     }
 
@@ -504,40 +779,40 @@ userRouter.post("/create/review/images/:review_id", userAuthMiddleware, async (r
 
     try {
         const reviewExist = await prisma.review.findUnique({
-          where: {
-            review_id: review_id,
-          },
+            where: {
+                review_id: review_id,
+            },
         });
-    
+
         if (!reviewExist) {
-          return res.status(404).json({
-            success: false,
-            message: 'Review Not Found',
-          });
+            return res.status(404).json({
+                success: false,
+                message: 'Review Not Found',
+            });
         }
-    
+
         const url = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${key}`
-    
+
         await prisma.reviewImage.create({
-          data: {
-            review_id: reviewExist.review_id,
-            url: url,
-            key: key
-          }
+            data: {
+                review_id: reviewExist.review_id,
+                url: url,
+                key: key
+            }
         })
-    
+
         res.status(statusCode.OK).json({
-          success: true,
-          message: "File metadata stored successfully"
+            success: true,
+            message: "File metadata stored successfully"
         })
-    
-      } catch (error) {
+
+    } catch (error) {
         console.error('Error storing image metadata:', error);
         res.status(500).json({
-          success: false,
-          message: 'Internal Server Error',
+            success: false,
+            message: 'Internal Server Error',
         });
-      }
+    }
 })
 
 userRouter.delete('/delete/review/:review_id', userAuthMiddleware, async (req, res) => {
@@ -568,7 +843,7 @@ userRouter.delete('/delete/review/:review_id', userAuthMiddleware, async (req, r
                 review_id: review_id
             }
         })
-        
+
         await prisma.review.delete({
             where: {
                 review_id: review_id

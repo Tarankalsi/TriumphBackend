@@ -20,7 +20,7 @@ export const sendEmail = async ({ to, subject, message ,html}: sendEmailProp) =>
         Source: sourceEmail,// Replace with your verified domain email
         Destination: {
             ToAddresses: [to],
-        },
+        },  
         Message: {
             Subject: {
                 Data: subject,

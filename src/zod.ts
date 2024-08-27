@@ -7,6 +7,7 @@ export const productSchema = zod.object({
     price: zod.number(),
     availability: zod.number(),
     SKU: zod.string().toUpperCase(),
+    discount_percent: zod.number().optional(),
     material: zod.string().optional(),
     shape: zod.string().optional(),
     design_style: zod.string().optional(),
@@ -21,7 +22,7 @@ export const productSchema = zod.object({
     light_color_temperature: zod.string().optional(),
     included_components: zod.string().optional(),
     lighting_method: zod.string().optional(),
-    item_weight: zod.string().optional(),
+    item_weight: zod.string(),
     height: zod.string().optional(),
     length: zod.string().optional(),
     width: zod.string().optional(),
@@ -43,10 +44,10 @@ export const productSchema = zod.object({
     embellishment: zod.string().optional(),
     colors: zod.array(
         zod.object({
-          color_name: zod.string(),
-          hex: zod.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
+            color_name: zod.string(),
+            hex: zod.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
         })
-      ),
+    ),
 })
 
 export const pdUpdateSchema = zod.object({
@@ -69,7 +70,7 @@ export const pdUpdateSchema = zod.object({
     light_color_temperature: zod.string().optional(),
     included_components: zod.string().optional(),
     lighting_method: zod.string().optional(),
-    item_weight: zod.string().optional(),
+    item_weight: zod.string(),
     height: zod.string().optional(),
     length: zod.string().optional(),
     width: zod.string().optional(),
@@ -90,12 +91,12 @@ export const pdUpdateSchema = zod.object({
     batteries: zod.string().optional(),
     embellishment: zod.string().optional(),
     colors: zod.array(
-      zod.object({
-        color_name: zod.string(),
-        hex: zod.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
-      })
+        zod.object({
+            color_name: zod.string(),
+            hex: zod.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
+        })
     )
-    .optional(),
+        .optional(),
 })
 
 
@@ -148,3 +149,46 @@ export const signedUrlImageSchema = zod.object({
     imageName: zod.string(),
     contentType: zod.string()
 })
+
+export enum OrderStatus {
+    Processing = 'processing',
+    Shipped = 'shipped',
+    Delivered = 'delivered',
+    Cancelled = 'cancelled',
+    Returned = 'returned',
+}
+
+export enum PaymentMethod {
+    CashOnDelivery = 'COD',
+    UPI = 'upi',
+    DebitCard = 'debit card',
+    NetBanking = 'net banking',
+    CreditCard = 'credit card',
+    BankTransfer = 'bank transfer'
+}
+
+
+export const createOrderSchema = zod.object({
+    payment_method: zod.enum([
+        PaymentMethod.CashOnDelivery,
+        PaymentMethod.CreditCard,
+        PaymentMethod.DebitCard,
+        PaymentMethod.BankTransfer,
+        PaymentMethod.NetBanking,
+        PaymentMethod.UPI
+    ]),
+    address_id: zod.string(), 
+})
+
+
+
+export const addressSchema = zod.object({
+    street: zod.string(),
+    city: zod.string(),
+    state: zod.string(),
+    postal_code: zod.string(),
+    country: zod.string(),
+    phone_number: zod
+        .string()
+        .regex(/^\d{10}$/, "Phone number must be exactly 10 digits").optional() // Ensures exactly 10 digits
+});
