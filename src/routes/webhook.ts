@@ -11,15 +11,13 @@ webhookRouter.post('/status', (req, res) => {
       // Log the incoming webhook event
       console.log('Received Shiprocket webhook:', event);
   
-      // Check the type of event and process accordingly
-      if (event.type === 'order_status_update') {
-        handleOrderStatusUpdate(event.data);
-      } else {
-        console.log('Unknown event type:', event.type);
-      }
   
       // Respond to Shiprocket to confirm receipt
-      res.status(200).send('Webhook received');
+      res.status(200).json({
+        success: true,
+        "message":'Webhook received',
+        "event": event
+      });
     } catch (error) {
       console.error('Error processing webhook:', error);
       res.status(500).send('Internal Server Error');
