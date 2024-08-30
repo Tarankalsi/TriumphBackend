@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Router, Request, Response } from "express";
-import { addressSchema, categorySchema, otpVerificationSchema, pdUpdateSchema, productSchema, reviewSchema, signedUrlImageSchema, user_signinSchema, user_signupSchema } from "../zod";
+import { addressSchema, categorySchema, createCartSchema, otpVerificationSchema, pdUpdateSchema, productSchema, reviewSchema, signedUrlImageSchema, user_signinSchema, user_signupSchema } from "../zod";
 import { PrismaClient } from "@prisma/client";
 import statusCode from "../statusCode";
 import handleErrorResponse, { CustomError } from "../utils/handleErrorResponse";
@@ -237,11 +237,11 @@ userRouter.get('/data', userAuthMiddleware, async (req, res) => {
                 full_name: true,
                 email: true,
                 phone_number: true,
-                address:true,
-                cart:true
+                address: true,
+                cart: true
             }
         })
-        
+
         if (!user) {
             return res.status(statusCode.OK).json({
                 success: false,
@@ -257,9 +257,10 @@ userRouter.get('/data', userAuthMiddleware, async (req, res) => {
     }
 })
 
-userRouter.post('/create/address',userAuthMiddleware, async (req, res) => {
+userRouter.post('/add', userAuthMiddleware, async (req, res) => {
     const body = req.body
     const user_id = req.user_id
+    
     const { success, error } = addressSchema.safeParse(body)
 
     if (!success) {
@@ -278,17 +279,26 @@ userRouter.post('/create/address',userAuthMiddleware, async (req, res) => {
     }
 
     try {
+       
+        if (body.street && body.city && body.state && body.country && body.postal_code) {
+            const address = await prisma.address.create({
+                data: {
+                    user_id: user_id,
+                    street: body.street,
+                    city: body.city,
+                    state: body.state,
+                    postal_code: body.postal_code,
+                    country: body.country
+                }
+            })
+
+            return res.status(statusCode.OK).json({
+                success: true,
+                message: "Address created successfully",
+                address: address
+            })
+        }
         
-        const newAddress = await prisma.address.create({
-            data: {
-                user_id: user_id,
-                street: body.street,
-                city: body.city,
-                state: body.state,
-                postal_code: body.postal_code,
-                country: body.country
-            }
-        })
 
         if (body.phone_number) {
             await prisma.user.update({
@@ -299,13 +309,18 @@ userRouter.post('/create/address',userAuthMiddleware, async (req, res) => {
                     phone_number: body.phone_number
                 }
             })
-        }
-        
 
-        return res.status(statusCode.OK).json({
-            success: true,
-            message: "Address created and user's phone number updated",
-            address:newAddress
+            return res.status(statusCode.OK).json({
+                success: true,
+                message: "User's phone number updated",
+                phone_number: body.phone_number
+            })
+        }
+
+
+        return res.status(statusCode.BAD_REQUEST).json({
+            success: false,
+            message: "Something's Wrong"
         })
     } catch (error) {
         console.error('Error creating cart:', error);
@@ -313,7 +328,7 @@ userRouter.post('/create/address',userAuthMiddleware, async (req, res) => {
     }
 })
 
-userRouter.delete(`/delete/address/:address_id`,userAuthMiddleware,async (req,res)=>{
+userRouter.delete(`/delete/address/:address_id`, userAuthMiddleware, async (req, res) => {
     const address_id = req.params.address_id
     const user_id = req.user_id
 
@@ -333,7 +348,7 @@ userRouter.delete(`/delete/address/:address_id`,userAuthMiddleware,async (req,re
 
         if (!addressExist) {
             return res.status(statusCode.NOT_FOUND).json({
-                success : false,
+                success: false,
                 message: "Address Not Found"
             })
         }
@@ -360,17 +375,42 @@ userRouter.delete(`/delete/address/:address_id`,userAuthMiddleware,async (req,re
 userRouter.post('/create/cart', userIsLoggedIn, async (req, res) => {
 
     const user_id = req.user_id
+    const { is_temporary } = req.body
+
+    const { success, error } = createCartSchema.safeParse(req.body)
+
+    if (!success) {
+        return res.status(statusCode.BAD_REQUEST).json({
+            success: false,
+            message: "Zod verification failed",
+            error: error?.issues
+        })
+    }
 
     try {
-
-
-        const newCart = await prisma.cart.create({
-            data: {
-                user_id: user_id ?? null
+        let newCart
+        if (is_temporary) {
+            if (user_id) {
+                newCart = await prisma.cart.create({
+                    data: {
+                        user_id: user_id,
+                        is_temporary: is_temporary
+                    }
+                })
+            } else {
+                return res.status(statusCode.OK).json({
+                    success: false,
+                    message: "Temporary cart only be created if user is exist",
+                })
             }
-        })
 
-
+        } else {
+            newCart = await prisma.cart.create({
+                data: {
+                    user_id: user_id ?? null
+                }
+            })
+        }
 
         const cartToken = jwt.sign({ cart_id: newCart.cart_id }, CART_JWT_SECRET_KEY)
 
@@ -386,12 +426,13 @@ userRouter.post('/create/cart', userIsLoggedIn, async (req, res) => {
     }
 })
 
+
 userRouter.put('/add-user-id/:cart_id', userAuthMiddleware, async (req, res) => {
     const user_id = req.user_id
     const cart_id = req.params.cart_id
     try {
         const cartExist = await prisma.cart.findUnique({
-            where:{
+            where: {
                 cart_id: cart_id
             }
         })
@@ -423,7 +464,7 @@ userRouter.put('/add-user-id/:cart_id', userAuthMiddleware, async (req, res) => 
         handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
     }
 
-    
+
 })
 // Update behaviour when user is logged in
 userRouter.post('/addToCart/:product_id', async (req, res) => {
@@ -547,7 +588,7 @@ userRouter.put('/update/cart/quantity/:cart_item_id', async (req, res) => {
             });
         }
 
-       
+
 
 
 
@@ -626,10 +667,10 @@ userRouter.get("/cart", async (req, res) => {
             }, select: {
                 cart_id: true,
                 user_id: true,
-                cartItems:{
+                cartItems: {
                     include: {
                         product: true, // This will include all fields of the related Product model
-                      },
+                    },
                 }
             }
         })
@@ -645,6 +686,34 @@ userRouter.get("/cart", async (req, res) => {
             cart: cart
         })
     } catch (error) {
+        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+    }
+})
+
+userRouter.delete('/delete/cart/tempCartItems', userAuthMiddleware, async (req, res) => {
+    const cartToken = req.headers['cart-token'] as string
+    let decoded
+    if (cartToken) {
+        decoded = jwt.verify(cartToken, CART_JWT_SECRET_KEY) as cartTokenPayload;
+    } else {
+        return res.status(statusCode.BAD_REQUEST).json({
+            success: false,
+            message: "Cart Token is not given"
+        })
+    }
+    try {
+        await prisma.cartItem.deleteMany({
+            where: {
+                cart_id: decoded.cart_id
+            }
+        })
+
+        return res.status(statusCode.OK).json({
+            success: true,
+            message: "Temporary Cart Items Deleted Successfully"
+        })
+    }catch(error){
+        console.log(error)
         handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
     }
 })

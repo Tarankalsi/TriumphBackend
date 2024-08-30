@@ -23,7 +23,7 @@ model User {
   is_active         Boolean   @default(true)
   address           Address[]
   reviews           Review[]
-  cart              Cart?
+  cart              Cart[]
   // orders             Order[]
   Order             Order[]
   otp               U_OTP?
@@ -70,7 +70,7 @@ model Address {
   country     String
   postal_code String
   user        User    @relation(fields: [user_id], references: [user_id])
-  user_id     String  @unique
+  user_id     String  
   orders      Order[]
 }
 
@@ -185,8 +185,9 @@ model ReviewImage {
 model Cart {
   cart_id    String     @id @default(uuid())
   user       User?      @relation(fields: [user_id], references: [user_id])
-  user_id    String?    @unique
+  user_id    String?    
   cartItems  CartItem[]
+  is_temporary Boolean  @default(false)
   created_at DateTime   @default(now())
   updated_at DateTime   @updatedAt
 }
@@ -226,14 +227,16 @@ model Order {
   shipping_address              Address     @relation(fields: [shipping_address_id], references: [address_id])
   shipping_address_id           String
   shiprocket_order_id           String?
+  shiprocket_channel_order_id           String?
   shiprocket_shipment_id        String? // New field to store Shiprocket shipment ID
   shiprocket_tracking_url       String? // New field to store tracking URL or any tracking details
   shiprocket_status             String?
   shiprocket_awb_code           String?
   shiprocket_courier_partner_id String?
   shiprocket_estimated_delivery DateTime?
-  shiprocket_shipment_label_url String?  // URL of the shipment Label
-  shiprocket_manifest_url       String? 
+  shiprocket_shipment_label_url String? // URL of the shipment Label
+  shiprocket_manifest_url       String?
+  shiprocket_updated_at         DateTime?
 
   order_items OrderItem[]
 }
@@ -248,4 +251,5 @@ model OrderItem {
   unit_price    Float
   subTotal      Float
   discount      Float
+  color         String
 }

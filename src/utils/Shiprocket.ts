@@ -12,6 +12,7 @@ type CartItem = {
     product: Product;
 };
 
+
 type Bill = {
     subTotal: number;
     total: number;
@@ -25,7 +26,7 @@ type User = {
     email: string;
     full_name: string | null;
     phone_number: string | null;
-    cart: Cart | null;
+    cart: Cart[] ;
 };
 
 type PackageDetails = {
@@ -68,10 +69,10 @@ export const createShiprocketShipment = async (order: Order, user: User, cartIte
                 })),
                 payment_method: order.payment_method,
                 sub_total: order.sub_total,
-                length: 10, // Replace with actual length
-                breadth: 10, // Replace with actual breadth
-                height: 10, // Replace with actual height
-                weight: 1.5  // Replace with actual weight
+                length: 5, // Replace with actual length
+                breadth: 5, // Replace with actual breadth
+                height: 5, // Replace with actual height
+                weight: 0.1  // Replace with actual weight
             },
             {
                 headers: getShiprocketHeaders()
@@ -195,9 +196,9 @@ export const generateManifest = async (shipment_id: number) => {
 };
 
 // Get Tracking
-export const getTracking = async (awb_code: number) => {
+export const getTracking = async ( order_id : number,channel_id: number) => {
     try {
-        const response = await axios.get(`https://apiv2.shiprocket.in/v1/external/courier/track/awb/${awb_code}`, { headers: getShiprocketHeaders() });
+        const response = await axios.get(`https://apiv2.shiprocket.in/v1/external/courier/track?order_id=${order_id}&channel_id=${channel_id}`, { headers: getShiprocketHeaders() });
         return response.data;
     } catch (error) {
         console.error('Error tracking shipment:', error);
@@ -217,5 +218,30 @@ export const updateShiprocketOrder = async (shipmentId: number, payload: object)
     } catch (error) {
         console.error('Error updating Shiprocket order:', error);
         throw new Error('Failed to update Shiprocket order');
+    }
+};
+
+export const cancelShiprocketOrder = async (order_id: number) => {
+    try {
+        // const trackingResponse = await axios.get(
+        //     `https://apiv2.shiprocket.in/v1/external/courier/track/shipment/${order_id}`,
+        //     { headers: getShiprocketHeaders() }
+        // );
+
+        // const status = trackingResponse.data.current_status;
+        // if (status === 'shipped' || status === 'in transit') {
+        //     throw new Error('Order cannot be canceled as it is already shipped or in transit');
+        // }
+
+        const cancelResponse = await axios.post(
+            'https://apiv2.shiprocket.in/v1/external/orders/cancel',
+            { "ids": [order_id] },
+            { headers: getShiprocketHeaders() }
+        );
+
+        return cancelResponse;
+    } catch (error) {
+        console.error('Error while cancelling the order:', error);
+        throw new Error('Failed to cancel order');
     }
 };

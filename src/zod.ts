@@ -183,12 +183,17 @@ export const createOrderSchema = zod.object({
 
 
 export const addressSchema = zod.object({
-    street: zod.string(),
-    city: zod.string(),
-    state: zod.string(),
-    postal_code: zod.string(),
-    country: zod.string(),
+    street: zod.string().optional(),
+    city: zod.string().optional(),
+    state: zod.string().optional(),
+    postal_code: zod.string().optional(),
+    country: zod.string().optional(),
     phone_number: zod
         .string()
         .regex(/^\d{10}$/, "Phone number must be exactly 10 digits").optional() // Ensures exactly 10 digits
 });
+
+
+export const createCartSchema = zod.object({
+    is_temporary: zod.boolean().optional()
+})

@@ -1,22 +1,31 @@
+import { PrismaClient } from "@prisma/client";
 import express from "express"
 
 const webhookRouter = express.Router();
 
-
-webhookRouter.post('/status', (req, res) => {
+const prisma = new PrismaClient();
+webhookRouter.post('/status', async (req, res) => {
     try {
       // Extract the event data from the request body
       const event = req.body;
   
       // Log the incoming webhook event
-      console.log('Received Shiprocket webhook:', event);
   
-  
+      const updateOrder = await prisma.order.updateMany({
+        where: {
+          shiprocket_awb_code: event.awb
+        },
+        data: {
+          status:event.current_status,
+          shiprocket_status: event.current_status,
+          shiprocket_updated_at: new Date()
+        }
+      });
+      
       // Respond to Shiprocket to confirm receipt
       res.status(200).json({
         success: true,
-        "message":'Webhook received',
-        "event": event
+        "message":`Order with AWB code ${event.awb} updated successfully.`
       });
     } catch (error) {
       console.error('Error processing webhook:', error);
@@ -24,18 +33,5 @@ webhookRouter.post('/status', (req, res) => {
     }
   });
   
-  // Function to handle order status updates
-  function handleOrderStatusUpdate(data : any) {
-    // Extract relevant information from the data
-    const { order_id, status, timestamp } = data;
-  
-    // Update your database or system with the new status
-    console.log(`Order ID: ${order_id}`);
-    console.log(`New Status: ${status}`);
-    console.log(`Timestamp: ${timestamp}`);
-  
-    // Implement your database update logic here
-    // Example: db.updateOrderStatus(order_id, status);
-  }
 
 export default webhookRouter
