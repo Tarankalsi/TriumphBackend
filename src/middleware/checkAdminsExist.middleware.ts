@@ -20,6 +20,7 @@ export const checkAdminsExist = async (req: Request, res: Response, next: NextFu
       return res.status(statusCode.INTERNAL_SERVER_ERROR).json({
         success: false,
         message: 'Internal Server Error',
+        message2: "Hi admin exist checking error"
       });
     }
   };

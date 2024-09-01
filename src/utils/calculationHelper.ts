@@ -1,4 +1,5 @@
-import { Product } from "@prisma/client"
+import { Address, Product } from "@prisma/client"
+import { selectBestCourier } from "./Shiprocket";
 
 
 
@@ -10,15 +11,27 @@ type CartItem = {
     color: string;
     product: Product;
 };
-export const billing = (cartItems: CartItem[], deliveryFee: number, tax: number) => {
+export const billing = async (cartItems: CartItem[], address :Address, tax: number ) => {
 
     const bill = {
         subTotal: 0,
         total: 0,
         discount: 0,
-        deliveryFee: deliveryFee,
+        deliveryFee: 0,
         tax: 0
     }
+
+    const totalWeight = calculateCartWeight(cartItems)
+
+    const courier_partner = await selectBestCourier({
+        delivery_postcode: address.postal_code,
+        weight: totalWeight,
+        cod: 1, // 1 for COD, 0 for Prepaid
+        declared_value: bill.total,
+        pickup_address_location: 'Primary',
+      });
+
+      bill.deliveryFee = courier_partner.rate
 
     // calculate subtotal
     cartItems.forEach((cartItem) => {
@@ -34,17 +47,17 @@ export const billing = (cartItems: CartItem[], deliveryFee: number, tax: number)
     });
 
     // Calculate total
-    bill.tax = (bill.subTotal * tax / 100);
+    bill.tax = (bill.subTotal * (tax / 100));
     bill.total = bill.subTotal + bill.deliveryFee + bill.tax - bill.discount;
 
     return bill;
 
 }
 
-
-export const calculateCartWeight = (cartItems : CartItem[]) => {
-    let weight 
-    cartItems.map((cartItem) =>{
-        weight =+ parseFloat(cartItem.product.item_weight)  * cartItem.quantity
-    })
-}
+export const calculateCartWeight = (cartItems: CartItem[]) => {
+    let weight = 0;  // Initialize weight to 0
+    cartItems.forEach((cartItem) => {
+        weight += (parseFloat(cartItem.product.item_weight) / 1000) * cartItem.quantity;  // Correct accumulation
+    });
+    return weight;
+};

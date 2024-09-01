@@ -53,10 +53,10 @@ const authMiddleware = (userType: string) => (req: Request, res: Response, next:
             })
         }
         const decoded = jwt.verify(authToken, secretKey) as JwtPayload
-        console.log(decoded)
+       
 
         if (userType === 'admin') {
-            console.log(decoded.admin_id + "from middleware")
+       
             req.admin_id = decoded.admin_id;
         } else {
             req.user_id = decoded.user_id

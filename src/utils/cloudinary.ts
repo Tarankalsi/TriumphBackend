@@ -19,7 +19,7 @@ export const uploadOnCloudinary = async (localFilePath :string) : Promise<Upload
           });
 
         //file has been uploaded successfully
-        console.log("file is uploaded on cloudinary" , response.url);
+
         fs.unlinkSync(localFilePath)
         return response
 
@@ -33,7 +33,7 @@ export const deleteFromCloudinary = async (public_id :string)=>{
         if (!public_id) {
             throw new Error("undefined Id of Image")
         }
-        console.log(public_id) 
+    
         const response = await cloudinary.uploader.destroy(public_id)
 
         //file has been deleted successfully

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -22,55 +16,48 @@ model User {
   last_login_date   DateTime?
   is_active         Boolean   @default(true)
   address           Address[]
-  reviews           Review[]
   cart              Cart[]
-  // orders             Order[]
   Order             Order[]
+  reviews           Review[]
   otp               U_OTP?
-}
-
-enum AdminRole {
-  admin
-  moderator
 }
 
 model Admin {
   admin_id   String    @id @default(uuid())
-  email      String    @unique
   password   String
   full_name  String
   role       AdminRole @default(moderator)
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
+  email      String    @unique
   otp        A_OTP?
 }
 
 model A_OTP {
   admin_id   String   @id
-  admin      Admin    @relation(fields: [admin_id], references: [admin_id])
   code       String
   created_at DateTime @default(now())
   expires_at DateTime
+  admin      Admin    @relation(fields: [admin_id], references: [admin_id])
 }
 
 model U_OTP {
   user_id    String   @id @unique
-  user       User     @relation(fields: [user_id], references: [user_id])
   code       String
   created_at DateTime @default(now())
   expires_at DateTime
+  user       User     @relation(fields: [user_id], references: [user_id])
 }
 
-// Define the Address entity
 model Address {
   address_id  String  @id @default(uuid())
-  street      String
   city        String
   state       String
   country     String
   postal_code String
+  user_id     String
+  street      String
   user        User    @relation(fields: [user_id], references: [user_id])
-  user_id     String  
   orders      Order[]
 }
 
@@ -81,67 +68,63 @@ model Category {
   products    Product[]
 }
 
-// Define Product entity
 model Product {
-  product_id              String   @id @default(uuid())
-  category                Category @relation(fields: [category_id], references: [category_id])
-  category_id             String
+  product_id              String         @id @default(uuid())
   name                    String
   description             String
   price                   Float
-  discount_percent        Float    @default(0)
-  availability            Int      @default(0)
-  SKU                     String   @unique
-  brand                   String   @default("Triumph Lights")
-  material                String?
-  shape                   String?
-  design_style            String?
-  fixture_form            String?
-  ideal_for               String?
-  power_source            String?
-  installation            String?
-  shade_material          String?
-  voltage                 String?
-  light_color             String?
-  light_source            String?
-  light_color_temperature String?
-  included_components     String?
-  lighting_method         String?
-  item_weight             String
-  height                  String?
-  length                  String?
-  width                   String?
-  quantity                String?
-  power_rating            String?
+  SKU                     String         @unique
+  category_id             String
+  availability            Int            @default(0)
+  assembly_required       String?
+  brand                   String         @default("Triumph Lights")
   brightness              String?
   controller_type         String?
-  switch_type             String?
-  switch_mounting         String?
-  mounting_type           String?
-  fixture_type            String?
-  assembly_required       String?
-  primary_material        String?
-  number_of_light_sources String?
-  surge_protection        String?
-  shade_color             String?
-  key_features            String?
-  batteries               String?
+  design_style            String?
   embellishment           String?
-
-  colors    ProductColor[]
-  // variants      ProductVariants[]
-  reviews   Review[]
-  images    ProductImage[]
-  CartItem  CartItem[]
-  OrderItem OrderItem[]
+  fixture_form            String?
+  fixture_type            String?
+  height                  String
+  ideal_for               String?
+  included_components     String?
+  installation            String?
+  item_weight             String
+  key_features            String?
+  length                  String
+  light_color             String?
+  light_color_temperature String?
+  light_source            String?
+  lighting_method         String?
+  material                String?
+  mounting_type           String?
+  number_of_light_sources String?
+  power_rating            String?
+  power_source            String?
+  primary_material        String?
+  quantity                String?
+  shade_color             String?
+  shade_material          String?
+  shape                   String?
+  surge_protection        String?
+  switch_type             String?
+  voltage                 String?
+  width                   String
+  switch_mounting         String?
+  batteries               String?
+  discount_percent        Float          @default(0)
+  CartItem                CartItem[]
+  OrderItem               OrderItem[]
+  category                Category       @relation(fields: [category_id], references: [category_id])
+  colors                  ProductColor[]
+  images                  ProductImage[]
+  reviews                 Review[]
 }
 
 model ProductColor {
-  product_id String
   color_id   String
-
-  product Product @relation(fields: [product_id], references: [product_id])
-  color   Color   @relation(fields: [color_id], references: [color_id])
+  product_id String
+  color      Color   @relation(fields: [color_id], references: [color_id])
+  product    Product @relation(fields: [product_id], references: [product_id])
 
   @@id([product_id, color_id])
 }
@@ -153,55 +136,100 @@ model Color {
   products   ProductColor[]
 }
 
-// Define Prodcut image entity
 model ProductImage {
   image_id   String  @id @default(uuid())
-  key        String
   url        String
-  product    Product @relation(fields: [product_id], references: [product_id])
   product_id String
+  key        String
+  product    Product @relation(fields: [product_id], references: [product_id])
 }
 
 model Review {
   review_id    String        @id @default(uuid())
-  user         User          @relation(fields: [user_id], references: [user_id])
   user_id      String
-  product      Product       @relation(fields: [product_id], references: [product_id])
   product_id   String
   rating       Int
   review_text  String
   review_date  DateTime      @default(now())
+  product      Product       @relation(fields: [product_id], references: [product_id])
+  user         User          @relation(fields: [user_id], references: [user_id])
   reviewImages ReviewImage[]
 }
 
 model ReviewImage {
   image_id  String @id @default(uuid())
-  key       String
   url       String
-  review    Review @relation(fields: [review_id], references: [review_id])
   review_id String
+  key       String
+  review    Review @relation(fields: [review_id], references: [review_id])
 }
 
 model Cart {
-  cart_id    String     @id @default(uuid())
-  user       User?      @relation(fields: [user_id], references: [user_id])
-  user_id    String?    
-  cartItems  CartItem[]
-  is_temporary Boolean  @default(false)
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
+  cart_id      String     @id @default(uuid())
+  user_id      String?
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+  is_temporary Boolean    @default(false)
+  user         User?      @relation(fields: [user_id], references: [user_id])
+  cartItems    CartItem[]
 }
 
 model CartItem {
   cart_item_id String  @id @default(uuid())
-  cart         Cart    @relation(fields: [cart_id], references: [cart_id])
   cart_id      String
-  product      Product @relation(fields: [product_id], references: [product_id])
   product_id   String
   quantity     Int
   color        String
+  cart         Cart    @relation(fields: [cart_id], references: [cart_id])
+  product      Product @relation(fields: [product_id], references: [product_id])
 
   @@unique([cart_id, product_id])
+}
+
+model Order {
+  order_id                      String      @id @default(uuid())
+  user_id                       String
+  order_date                    DateTime    @default(now())
+  total_amount                  Float
+  payment_method                String
+  shipping_address_id           String
+  discount                      Float
+  shipping_charges              Float?
+  sub_total                     Float
+  tax_amount                    Float
+  status                        orderStatus
+  shiprocket_status             String?
+  shiprocket_tracking_url       String?
+  shiprocket_shipment_id        String?
+  shiprocket_order_id           String?
+  shiprocket_awb_code           String?
+  shiprocket_courier_partner_id String?
+  shiprocket_estimated_delivery String?
+  shiprocket_shipment_label_url String?
+  shiprocket_manifest_url       String?
+  shiprocket_updated_at         DateTime?
+  shiprocket_channel_order_id   String?
+  shipping_address              Address     @relation(fields: [shipping_address_id], references: [address_id])
+  user                          User        @relation(fields: [user_id], references: [user_id])
+  order_items                   OrderItem[]
+}
+
+model OrderItem {
+  order_item_id String  @id @default(uuid())
+  order_id      String
+  product_id    String
+  quantity      Int
+  unit_price    Float
+  subTotal      Float
+  discount      Float
+  color         String
+  order         Order   @relation(fields: [order_id], references: [order_id])
+  product       Product @relation(fields: [product_id], references: [product_id])
+}
+
+enum AdminRole {
+  admin
+  moderator
 }
 
 enum orderStatus {
@@ -210,46 +238,4 @@ enum orderStatus {
   delivered
   cancelled
   returned
-}
-
-model Order {
-  order_id                      String      @id @default(uuid())
-  user                          User        @relation(fields: [user_id], references: [user_id])
-  user_id                       String
-  order_date                    DateTime    @default(now())
-  sub_total                     Float
-  shipping_charges              Float
-  tax_amount                    Float
-  discount                      Float
-  total_amount                  Float
-  status                        orderStatus
-  payment_method                String
-  shipping_address              Address     @relation(fields: [shipping_address_id], references: [address_id])
-  shipping_address_id           String
-  shiprocket_order_id           String?
-  shiprocket_channel_order_id           String?
-  shiprocket_shipment_id        String? // New field to store Shiprocket shipment ID
-  shiprocket_tracking_url       String? // New field to store tracking URL or any tracking details
-  shiprocket_status             String?
-  shiprocket_awb_code           String?
-  shiprocket_courier_partner_id String?
-  shiprocket_estimated_delivery DateTime?
-  shiprocket_shipment_label_url String? // URL of the shipment Label
-  shiprocket_manifest_url       String?
-  shiprocket_updated_at         DateTime?
-
-  order_items OrderItem[]
-}
-
-model OrderItem {
-  order_item_id String  @id @default(uuid())
-  order         Order   @relation(fields: [order_id], references: [order_id])
-  order_id      String
-  product       Product @relation(fields: [product_id], references: [product_id])
-  product_id    String
-  quantity      Int
-  unit_price    Float
-  subTotal      Float
-  discount      Float
-  color         String
 }

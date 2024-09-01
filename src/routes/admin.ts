@@ -59,7 +59,7 @@ adminRouter.post('/signup', checkAdminsExist, async (req, res) => {
         }
 
         if (areAdminsPresent) {
-            console.log(req.admin_id)
+  
             if (!req.admin_id) {
                 return res.status(statusCode.UNAUTHORIZED).json({
                     success: false,
@@ -275,7 +275,7 @@ adminRouter.post('/signin', async (req, res) => {
         }
 
         const respone = await sendEmail(emailData)
-        console.log(respone)
+   
     
         return res.status(statusCode.OK).json({
             success: true,
@@ -385,7 +385,7 @@ adminRouter.post('/sendEmail', async (req,res)=>{
     }
     try {
         const email = sendEmail(details)
-        console.log(email)
+
 
         return res.json({
             success : true,

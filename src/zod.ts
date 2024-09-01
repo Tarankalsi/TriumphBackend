@@ -23,9 +23,9 @@ export const productSchema = zod.object({
     included_components: zod.string().optional(),
     lighting_method: zod.string().optional(),
     item_weight: zod.string(),
-    height: zod.string().optional(),
-    length: zod.string().optional(),
-    width: zod.string().optional(),
+    height: zod.string(),
+    length: zod.string(),
+    width: zod.string(),
     quantity: zod.string().optional(),
     power_rating: zod.string().optional(),
     brightness: zod.string().optional(),
@@ -102,6 +102,10 @@ export const pdUpdateSchema = zod.object({
 
 export const categorySchema = zod.object({
     name: zod.string(),
+    description: zod.string().optional(),
+})
+export const updateCategorySchema = zod.object({
+    name: zod.string().optional(),
     description: zod.string().optional(),
 })
 

@@ -12,6 +12,7 @@ import { generateAlphanumericOTP, generateOrUpdateOTP, typeProp } from '../utils
 import { sendEmail } from '../utils/sendEmail';
 import { userIsLoggedIn } from '../middleware/userIsLoggedIn.middleware';
 import { deleteObjectS3, uploadImageS3 } from '../utils/s3';
+import { billing } from '../utils/calculationHelper';
 
 const userRouter = Router();
 const prisma = new PrismaClient();
@@ -925,6 +926,54 @@ userRouter.delete('/delete/review/:review_id', userAuthMiddleware, async (req, r
         })
 
     } catch (error) {
+        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+    }
+})
+
+userRouter.post(`/cart/bill/:cart_id`, async(req,res)=>{
+    const cart_id = req.params.cart_id
+    const{address_id} = req.body
+    try {
+        const cart = await prisma.cart.findUnique({
+            where: {
+                cart_id: cart_id
+            },
+            include: {
+                cartItems: {
+                    include: {
+                        product: true
+                    }
+                }
+            }
+        })
+        if (!cart) {
+            return res.status(statusCode.BAD_REQUEST).json({
+                success:false,
+                message:"Cart Not Found"
+            })
+        }
+        
+        const address = await prisma.address.findUnique({
+            where: {
+                address_id: address_id
+            }
+        })
+
+        if (!address) {
+            return res.status(statusCode.BAD_REQUEST).json({
+                success: false,
+                message: "Address Not Found"
+            })
+        }
+
+        const bill = await billing(cart.cartItems,address,18)
+        console.log(bill)
+        return res.status(statusCode.OK).json({
+            success: true,
+            message: "Bill Generated",
+            bill: bill
+        })
+    }catch(error){
         handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
     }
 })

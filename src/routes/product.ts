@@ -39,14 +39,67 @@ productRouter.post("/create/category", adminAuthMiddleware, async (req, res) => 
       category: category,
     });
   } catch (error) {
-    return res.status(statusCode.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: "Internal Server Error",
-      error: error
-    });
+    handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
   }
 });
 
+productRouter.put("/update/category/:category_id", adminAuthMiddleware, async (req, res) => {
+  const { category_id } = req.params;
+  const body = req.body;
+
+  const { success, error } = categorySchema.safeParse(body);
+
+  if (!success) {
+    return res.status(statusCode.BAD_REQUEST).json({
+      success: false,
+      message: "Zod Validation Error",
+      error: error?.issues
+    });
+  }
+
+  try {
+    await prisma.category.update({
+      where: { category_id },
+      data: body,
+    });
+
+    return res.status(statusCode.OK).json({
+      success: true,
+      message: "Category Updated Successfully",
+    });
+  } catch (error) {
+    handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+  }
+})
+
+productRouter.delete(`/delete/category/:category_id`, adminAuthMiddleware, async (req, res) => {
+  const { category_id } = req.params;
+
+  try {
+    const productExist = await prisma.product.findMany({
+      where: { category_id: category_id },
+      select: {
+        product_id: true,
+      },
+    })
+
+    if (productExist.length > 0)  {
+      return res.status(statusCode.FORBIDDEN).json({
+        success : false,
+        message: "Cannot delete category with associated products"
+      })
+    }
+
+    await prisma.category.delete({ where: { category_id } });
+
+    return res.status(statusCode.OK).json({
+      success: true,
+      message: "Category Deleted Successfully",
+    });
+  } catch (error) {
+    handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+  }
+})
 productRouter.post("/create/product/:category_id", adminAuthMiddleware, async (req: Request, res: Response) => {
   const body = req.body;
 
@@ -264,7 +317,7 @@ productRouter.post('/update/product/:product_id', adminAuthMiddleware, async (re
         let existingColor = await prisma.color.findUnique({
           where: { hex: col.hex },
         });
-        
+
 
         if (!existingColor) {
           // Create new color if it doesn't exist
@@ -274,7 +327,7 @@ productRouter.post('/update/product/:product_id', adminAuthMiddleware, async (re
               hex: col.hex,
             },
           });
-          
+
         }
 
         // Check if the relation already exists between the product and the color
@@ -286,7 +339,7 @@ productRouter.post('/update/product/:product_id', adminAuthMiddleware, async (re
             },
           },
         });
-        
+
         if (!colorLinkExists) {
           // Create the relation if it doesn't exist
           await prisma.productColor.create({
@@ -295,7 +348,7 @@ productRouter.post('/update/product/:product_id', adminAuthMiddleware, async (re
               color_id: existingColor.color_id,
             },
           });
-          
+
         }
       }
     }
@@ -425,7 +478,7 @@ productRouter.get("/category/:category_id", async (req, res) => {
         colors: true,
         reviews: true,
         images: true,
-        category:true
+        category: true
       }
     })
 
@@ -624,7 +677,7 @@ productRouter.get("/cart", async (req, res) => {
 productRouter.get('/search', async (req, res) => {
   const searchQuery = req.query.searchQuery as string;
 
-  
+
   try {
     const products = await prisma.product.findMany({
       where: {
@@ -667,8 +720,8 @@ productRouter.get('/search', async (req, res) => {
       include: {
         category: true,
         colors: {
-          include:{
-            color:true
+          include: {
+            color: true
           }
         },
         images: true,
@@ -790,7 +843,7 @@ productRouter.get("/all", async (req, res) => {
 
 productRouter.get("/all/colors", async (req, res) => {
   try {
-    
+
     const colors = await prisma.color.findMany()
 
     res.status(statusCode.OK).json({

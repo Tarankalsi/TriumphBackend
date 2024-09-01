@@ -37,103 +37,158 @@ type PackageDetails = {
     pickup_address_location: string;
 };
 
+type Dimensions = {
+    height: number;
+    length: number;
+    width: number;
+}
+
 // Helper Function for Headers
 const getShiprocketHeaders = () => ({
     Authorization: `Bearer ${process.env.SHIPROCKET_API_TOKEN}`
 });
 
 // Create Shiprocket Shipment
-export const createShiprocketShipment = async (order: Order, user: User, cartItems: CartItem[], address: Address) => {
+
+export const createShiprocketShipment = async (
+    order: Order,
+    user: User,
+    cartItems: CartItem[],
+    address: Address,
+    totalWeight: number,
+    dimensions: Dimensions
+  ) => {
     try {
-        const response = await axios.post(
-            'https://apiv2.shiprocket.in/v1/external/orders/create/adhoc',
-            {
-                order_id: order.order_id,
-                order_date: order.order_date.toISOString(),
-                billing_customer_name: user.full_name || "",
-                billing_last_name: "",
-                billing_address: address.street,
-                billing_city: address.city,
-                billing_pincode: address.postal_code,
-                billing_state: address.state,
-                billing_country: address.country,
-                billing_email: user.email || "",
-                billing_phone: user.phone_number || "",
-                shipping_is_billing: true,
-                order_items: cartItems.map(item => ({
-                    name: item.product.name,
-                    sku: item.product.SKU,
-                    units: item.quantity,
-                    selling_price: item.product.price,
-                    discount: (item.product.discount_percent / 100 * item.product.price) || 0
-                })),
-                payment_method: order.payment_method,
-                sub_total: order.sub_total,
-                length: 5, // Replace with actual length
-                breadth: 5, // Replace with actual breadth
-                height: 5, // Replace with actual height
-                weight: 0.1  // Replace with actual weight
-            },
-            {
-                headers: getShiprocketHeaders()
-            }
-        );
-        return response.data;
-    } catch (error) {
-        console.error('Error creating Shiprocket shipment:', error);
-        throw new Error('Failed to create Shiprocket shipment');
+      const response = await axios.post(
+        'https://apiv2.shiprocket.in/v1/external/orders/create/adhoc',
+        {
+          order_id: order.order_id,
+          order_date: order.order_date.toISOString(),
+          billing_customer_name: user.full_name || '',
+          billing_last_name: '',
+          billing_address: address.street,
+          billing_city: address.city,
+          billing_pincode: address.postal_code,
+          billing_state: address.state,
+          billing_country: address.country,
+          billing_email: user.email || '',
+          billing_phone: user.phone_number || '',
+          shipping_is_billing: true,
+          order_items: cartItems.map((item) => ({
+            name: item.product.name,
+            sku: item.product.SKU,
+            units: item.quantity,
+            selling_price: item.product.price,
+            discount: (item.product.discount_percent / 100) * item.product.price || 0,
+          })),
+          payment_method: order.payment_method,
+          sub_total: order.sub_total,
+          weight: totalWeight,
+          length: dimensions.length,
+          breadth: dimensions.width,
+          height: dimensions.height,
+        },
+        {
+          headers: getShiprocketHeaders(),
+        }
+      );
+  
+      return response.data;
+    } catch (error: any) {
+      if (error.response) {
+        // The request was made, and the server responded with a status code that falls out of the range of 2xx
+        console.error('Shiprocket API responded with an error:', error.response.data);
+        throw new Error(`Failed to create Shiprocket shipment. API Error: ${error.response.data.message || 'Unknown error'}`);
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('No response received from Shiprocket API:', error.request);
+        throw new Error('Failed to create Shiprocket shipment. No response received from the Shiprocket API.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error setting up the request to Shiprocket API:', error.message);
+        throw new Error(`Failed to create Shiprocket shipment. Error: ${error.message}`);
+      }
     }
-};
+  };
 
 // Select Best Courier
 export const selectBestCourier = async (packageDetails: PackageDetails) => {
-    try {
-        const pickupResponse = await axios.get(
-            'https://apiv2.shiprocket.in/v1/external/settings/company/pickup',
-            { headers: getShiprocketHeaders() }
-        );
+  try {
+    // Fetch pickup location details
+    const pickupResponse = await axios.get(
+      'https://apiv2.shiprocket.in/v1/external/settings/company/pickup',
+      { headers: getShiprocketHeaders() }
+    );
 
-        const pickupPincode = pickupResponse.data.data.shipping_address.find((address: any) =>
-            address.pickup_location === packageDetails.pickup_address_location
-        )?.pin_code;
 
-        if (!pickupPincode) {
-            throw new Error('Pickup pincode not found for the specified pickup address location.');
-        }
+    const pickupPincode = pickupResponse.data.data.shipping_address.find(
+      (address: any) => address.pickup_location === packageDetails.pickup_address_location
+    )?.pin_code;
 
-        const courierResponse = await axios.get(
-            'https://apiv2.shiprocket.in/v1/external/courier/serviceability/',
-            {
-                headers: getShiprocketHeaders(),
-                params: {
-                    pickup_postcode: pickupPincode,
-                    delivery_postcode: packageDetails.delivery_postcode,
-                    cod: packageDetails.cod,
-                    weight: packageDetails.weight,
-                    declared_value: packageDetails.declared_value
-                }
-            }
-        );
-
-        const bestCourier = courierResponse.data.data.available_courier_companies.reduce((prev: any, curr: any) => {
-            if (curr.estimated_delivery_days <= 4) {
-                if (!prev || curr.freight_charge < prev.freight_charge) {
-                    return curr;
-                }
-            }
-            return prev;
-        }, null);
-
-        if (!bestCourier) {
-            throw new Error('No suitable courier found with delivery within 4 days.');
-        }
-
-        return bestCourier;
-    } catch (error) {
-        console.error('Error fetching Shiprocket courier partners:', error);
-        throw new Error('Error fetching Shiprocket courier partners.');
+    if (!pickupPincode) {
+      throw new Error('Pickup pincode not found for the specified pickup address location.');
     }
+    console.log("Pickup Pincode: ",pickupPincode)
+    console.log("Deliver Pincode: ",packageDetails.delivery_postcode)
+    
+
+    // Check courier serviceability
+    const courierResponse = await axios.get(
+      'https://apiv2.shiprocket.in/v1/external/courier/serviceability/',
+      {
+        headers: getShiprocketHeaders(),
+        params: {
+          pickup_postcode: pickupPincode,
+          delivery_postcode: packageDetails.delivery_postcode,
+          cod: packageDetails.cod,
+          weight: packageDetails.weight,
+          declared_value: packageDetails.declared_value,
+        },
+      }
+    );
+
+    console.log("Courier response: ",courierResponse.data.data.available_courier_companies)
+
+    if (!courierResponse.data.data || !courierResponse.data.data.available_courier_companies.length) {
+      console.error('No available courier companies for the selected route.');
+      throw new Error('No available courier companies for the selected route.');
+    }
+
+    // Select the best courier
+    const bestCourier = courierResponse.data.data.available_courier_companies.reduce(
+      (prev: any, curr: any) => {
+        if (curr.estimated_delivery_days <= 4) {
+          if (!prev || curr.freight_charge < prev.freight_charge) {
+            return curr;
+          }
+        }
+        return prev;
+      },
+      null
+    );
+
+    if (!bestCourier) {
+      console.error('No suitable courier found with delivery within 4 days.');
+      throw new Error('No suitable courier found with delivery within 4 days.');
+    }
+
+    // Return best courier or handle AWB assign status
+    if (bestCourier.awb_assign_status === 0) {
+      console.error(
+        `AWB assign error: ${bestCourier.response.data.awb_assign_error}`
+      );
+      throw new Error(
+        `AWB assign error: ${bestCourier.response.data.awb_assign_error}`
+      );
+    }
+
+    return bestCourier;
+  } catch (error: any) {
+    console.error('Error fetching Shiprocket courier partners:', error.message || error);
+    throw new Error('Error fetching Shiprocket courier partners.');
+  }
 };
+
 
 // Generate AWB Code
 export const generateAWBCode = async (shipment_id: number, courier_id: number) => {
