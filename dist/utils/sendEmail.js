@@ -42,7 +42,7 @@ const sendEmail = (_a) => __awaiter(void 0, [_a], void 0, function* ({ to, subje
     try {
         const sendEmailCommand = new client_ses_1.SendEmailCommand(params);
         const result = yield awsConfig_1.ses.send(sendEmailCommand);
-        console.log('Email sent successfully:', result);
+        return result;
     }
     catch (error) {
         console.error('Error sending email:', error);

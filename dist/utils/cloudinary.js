@@ -30,7 +30,6 @@ const uploadOnCloudinary = (localFilePath) => __awaiter(void 0, void 0, void 0, 
             resource_type: "auto",
         });
         //file has been uploaded successfully
-        console.log("file is uploaded on cloudinary", response.url);
         fs_1.default.unlinkSync(localFilePath);
         return response;
     }
@@ -45,7 +44,6 @@ const deleteFromCloudinary = (public_id) => __awaiter(void 0, void 0, void 0, fu
         if (!public_id) {
             throw new Error("undefined Id of Image");
         }
-        console.log(public_id);
         const response = yield cloudinary_1.v2.uploader.destroy(public_id);
         //file has been deleted successfully
         return response;

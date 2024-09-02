@@ -16,6 +16,7 @@ const express_1 = require("express");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const client_1 = require("@prisma/client");
 const zod_1 = require("../zod");
+const auth_middleware_1 = require("../middleware/auth.middleware");
 const statusCode_1 = __importDefault(require("../statusCode"));
 const handleErrorResponse_1 = __importDefault(require("../utils/handleErrorResponse"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -24,9 +25,6 @@ const sendEmail_1 = require("../utils/sendEmail");
 const otpHandler_1 = require("../utils/otpHandler");
 const adminRouter = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
-//Forgot Password Route Pending 
-//Email Verification is also Pending
-//Email Validity is Pending
 const JWT_SECRET_KEY_ADMIN = process.env.JWT_SECRET_KEY_ADMIN;
 if (!JWT_SECRET_KEY_ADMIN) {
     throw new Error('JWT_SECRET_KEY_ADMIN must be defined in the environment variables');
@@ -61,7 +59,6 @@ adminRouter.post('/signup', checkAdminsExist_middleware_1.checkAdminsExist, (req
             });
         }
         if (areAdminsPresent) {
-            console.log(req.admin_id);
             if (!req.admin_id) {
                 return res.status(statusCode_1.default.UNAUTHORIZED).json({
                     success: false,
@@ -240,9 +237,7 @@ adminRouter.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, func
             message: `Hi, ${admin.full_name} Please Enter the following Verification code to login into your account.  Code : ${code}`,
             html: html
         };
-        console.log(emailData);
         const respone = yield (0, sendEmail_1.sendEmail)(emailData);
-        console.log(respone);
         return res.status(statusCode_1.default.OK).json({
             success: true,
             message: `OTP sent to ${admin.email}`,
@@ -296,7 +291,7 @@ adminRouter.post('/otp-verification/:admin_id', (req, res) => __awaiter(void 0, 
         const response = yield bcryptjs_1.default.compare(body.code, adminExist.otp.code);
         let token;
         if (response) {
-            token = jsonwebtoken_1.default.sign({ user_id: adminExist.admin_id }, JWT_SECRET_KEY_ADMIN);
+            token = jsonwebtoken_1.default.sign({ admin_id: adminExist.admin_id }, JWT_SECRET_KEY_ADMIN);
         }
         else {
             return res.status(statusCode_1.default.UNAUTHORIZED).json({
@@ -320,6 +315,10 @@ adminRouter.post('/otp-verification/:admin_id', (req, res) => __awaiter(void 0, 
         (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
     }
 }));
+adminRouter.get('/validate-token', auth_middleware_1.adminAuthMiddleware, (req, res) => {
+    res.json({ success: true, message: 'Token is valid.', admin: req.admin_id });
+});
+//Practice route
 adminRouter.post('/sendEmail', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const details = {
         to: "tarankhalsa3412@gmail.com",
@@ -329,7 +328,6 @@ adminRouter.post('/sendEmail', (req, res) => __awaiter(void 0, void 0, void 0, f
     };
     try {
         const email = (0, sendEmail_1.sendEmail)(details);
-        console.log(email);
         return res.json({
             success: true,
             message: "Email Sent"

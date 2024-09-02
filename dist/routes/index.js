@@ -17,14 +17,20 @@ const user_1 = __importDefault(require("./user"));
 const product_1 = __importDefault(require("./product"));
 const admin_1 = __importDefault(require("./admin"));
 const s3_1 = require("../utils/s3");
+const schedular_1 = require("../utils/schedular");
+const order_1 = __importDefault(require("./order"));
+const webhook_1 = __importDefault(require("./webhook"));
 const mainRouter = express_1.default.Router();
 mainRouter.use("/user", user_1.default);
 mainRouter.use("/product", product_1.default);
 mainRouter.use("/admin", admin_1.default);
+mainRouter.use("/order", order_1.default);
+mainRouter.use("/webhook", webhook_1.default);
 mainRouter.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const url = yield (0, s3_1.getObjectURL)("reviewImage/b4e80c15-fe67-49ef-bd80-0c557cb1ee55/review1722621934819.jpg");
     return res.status(200).json({
         url: url,
     });
 }));
+(0, schedular_1.deleteCartSchedular)();
 exports.default = mainRouter;

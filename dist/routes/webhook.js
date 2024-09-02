@@ -12,29 +12,34 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkAdminsExist = void 0;
-const auth_middleware_1 = require("./auth.middleware");
-const statusCode_1 = __importDefault(require("../statusCode"));
 const client_1 = require("@prisma/client");
+const express_1 = __importDefault(require("express"));
+const webhookRouter = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
-const checkAdminsExist = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+webhookRouter.post('/status', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const areAdminsPresent = yield prisma.admin.count();
-        if (areAdminsPresent) {
-            // If admins are present, apply auth middleware
-            return (0, auth_middleware_1.adminAuthMiddleware)(req, res, next);
-        }
-        else {
-            // If no admins are present, proceed without auth middleware
-            return next();
-        }
-    }
-    catch (error) {
-        return res.status(statusCode_1.default.INTERNAL_SERVER_ERROR).json({
-            success: false,
-            message: 'Internal Server Error',
-            message2: "Hi admin exist checking error"
+        // Extract the event data from the request body
+        const event = req.body;
+        // Log the incoming webhook event
+        const updateOrder = yield prisma.order.updateMany({
+            where: {
+                shiprocket_awb_code: event.awb
+            },
+            data: {
+                status: event.current_status,
+                shiprocket_status: event.current_status,
+                shiprocket_updated_at: new Date()
+            }
+        });
+        // Respond to Shiprocket to confirm receipt
+        res.status(200).json({
+            success: true,
+            "message": `Order with AWB code ${event.awb} updated successfully.`
         });
     }
-});
-exports.checkAdminsExist = checkAdminsExist;
+    catch (error) {
+        console.error('Error processing webhook:', error);
+        res.status(500).send('Internal Server Error');
+    }
+}));
+exports.default = webhookRouter;

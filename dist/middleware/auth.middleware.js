@@ -35,9 +35,7 @@ const authMiddleware = (userType) => (req, res, next) => {
             });
         }
         const decoded = jsonwebtoken_1.default.verify(authToken, secretKey);
-        console.log(decoded);
         if (userType === 'admin') {
-            console.log(decoded.admin_id + "from middleware");
             req.admin_id = decoded.admin_id;
         }
         else {

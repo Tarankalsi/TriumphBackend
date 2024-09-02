@@ -24,6 +24,7 @@ const otpHandler_1 = require("../utils/otpHandler");
 const sendEmail_1 = require("../utils/sendEmail");
 const userIsLoggedIn_middleware_1 = require("../middleware/userIsLoggedIn.middleware");
 const s3_1 = require("../utils/s3");
+const calculationHelper_1 = require("../utils/calculationHelper");
 const userRouter = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 const CART_JWT_SECRET_KEY = process.env.CART_JWT_SECRET_KEY;
@@ -43,7 +44,7 @@ userRouter.post('/signup', (req, res) => __awaiter(void 0, void 0, void 0, funct
         return res.status(statusCode_1.default.BAD_REQUEST).json({
             success: false,
             message: "Zod verification failed",
-            error: error.message
+            error: error === null || error === void 0 ? void 0 : error.issues
         });
     }
     try {
@@ -94,7 +95,7 @@ userRouter.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, funct
         return res.status(statusCode_1.default.BAD_REQUEST).json({
             success: false,
             message: "Zod verification failed",
-            error: error.message
+            error: error === null || error === void 0 ? void 0 : error.issues
         });
     }
     try {
@@ -136,14 +137,11 @@ userRouter.post('/otp-verification/:user_id', (req, res) => __awaiter(void 0, vo
     const user_id = req.params.user_id;
     const { success, error } = zod_1.otpVerificationSchema.safeParse(body);
     const now = new Date();
-    console.log(body);
-    console.log(req.params.user_id);
-    console.log(user_id);
     if (!success) {
         return res.status(statusCode_1.default.BAD_REQUEST).json({
             success: false,
             message: "Zod verification failed",
-            error: error.message
+            error: error === null || error === void 0 ? void 0 : error.issues
         });
     }
     try {
@@ -195,15 +193,177 @@ userRouter.post('/otp-verification/:user_id', (req, res) => __awaiter(void 0, vo
         (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
     }
 }));
+userRouter.get('/data', auth_middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const user_id = req.user_id;
+    if (!user_id) {
+        return res.status(statusCode_1.default.BAD_REQUEST).json({
+            success: false,
+            message: "User ID is required"
+        });
+    }
+    try {
+        const user = yield prisma.user.findUnique({
+            where: {
+                user_id: user_id
+            },
+            select: {
+                user_id: true,
+                full_name: true,
+                email: true,
+                phone_number: true,
+                address: true,
+                cart: true
+            }
+        });
+        if (!user) {
+            return res.status(statusCode_1.default.OK).json({
+                success: false,
+                message: "User Not Found"
+            });
+        }
+        return res.status(statusCode_1.default.OK).json({
+            success: true,
+            data: user
+        });
+    }
+    catch (error) {
+        (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
+    }
+}));
+userRouter.post('/add', auth_middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const body = req.body;
+    const user_id = req.user_id;
+    const { success, error } = zod_1.addressSchema.safeParse(body);
+    if (!success) {
+        return res.status(statusCode_1.default.BAD_REQUEST).json({
+            success: false,
+            message: "Zod verification failed",
+            error: error === null || error === void 0 ? void 0 : error.issues
+        });
+    }
+    if (!user_id) {
+        return res.status(statusCode_1.default.BAD_REQUEST).json({
+            success: false,
+            message: "User ID is required"
+        });
+    }
+    try {
+        if (body.street && body.city && body.state && body.country && body.postal_code) {
+            const address = yield prisma.address.create({
+                data: {
+                    user_id: user_id,
+                    street: body.street,
+                    city: body.city,
+                    state: body.state,
+                    postal_code: body.postal_code,
+                    country: body.country
+                }
+            });
+            return res.status(statusCode_1.default.OK).json({
+                success: true,
+                message: "Address created successfully",
+                address: address
+            });
+        }
+        if (body.phone_number) {
+            yield prisma.user.update({
+                where: {
+                    user_id: user_id
+                },
+                data: {
+                    phone_number: body.phone_number
+                }
+            });
+            return res.status(statusCode_1.default.OK).json({
+                success: true,
+                message: "User's phone number updated",
+                phone_number: body.phone_number
+            });
+        }
+        return res.status(statusCode_1.default.BAD_REQUEST).json({
+            success: false,
+            message: "Something's Wrong"
+        });
+    }
+    catch (error) {
+        console.error('Error creating cart:', error);
+        (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
+    }
+}));
+userRouter.delete(`/delete/address/:address_id`, auth_middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const address_id = req.params.address_id;
+    const user_id = req.user_id;
+    if (!user_id) {
+        return res.status(statusCode_1.default.BAD_REQUEST).json({
+            success: false,
+            message: "User ID is required"
+        });
+    }
+    try {
+        const addressExist = yield prisma.address.findUnique({
+            where: {
+                address_id: address_id,
+                user_id: user_id
+            }
+        });
+        if (!addressExist) {
+            return res.status(statusCode_1.default.NOT_FOUND).json({
+                success: false,
+                message: "Address Not Found"
+            });
+        }
+        yield prisma.address.delete({
+            where: {
+                address_id: address_id,
+                user_id: user_id
+            }
+        });
+        return res.status(statusCode_1.default.OK).json({
+            success: true,
+            message: "Address deleted"
+        });
+    }
+    catch (error) {
+        (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
+    }
+}));
 // Update behaviour when user is logged in
 userRouter.post('/create/cart', userIsLoggedIn_middleware_1.userIsLoggedIn, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user_id = req.user_id;
-    try {
-        const newCart = yield prisma.cart.create({
-            data: {
-                user_id: user_id !== null && user_id !== void 0 ? user_id : null
-            }
+    const { is_temporary } = req.body;
+    const { success, error } = zod_1.createCartSchema.safeParse(req.body);
+    if (!success) {
+        return res.status(statusCode_1.default.BAD_REQUEST).json({
+            success: false,
+            message: "Zod verification failed",
+            error: error === null || error === void 0 ? void 0 : error.issues
         });
+    }
+    try {
+        let newCart;
+        if (is_temporary) {
+            if (user_id) {
+                newCart = yield prisma.cart.create({
+                    data: {
+                        user_id: user_id,
+                        is_temporary: is_temporary
+                    }
+                });
+            }
+            else {
+                return res.status(statusCode_1.default.OK).json({
+                    success: false,
+                    message: "Temporary cart only be created if user is exist",
+                });
+            }
+        }
+        else {
+            newCart = yield prisma.cart.create({
+                data: {
+                    user_id: user_id !== null && user_id !== void 0 ? user_id : null
+                }
+            });
+        }
         const cartToken = jsonwebtoken_1.default.sign({ cart_id: newCart.cart_id }, CART_JWT_SECRET_KEY);
         return res.status(statusCode_1.default.OK).json({
             success: true,
@@ -213,6 +373,39 @@ userRouter.post('/create/cart', userIsLoggedIn_middleware_1.userIsLoggedIn, (req
     }
     catch (error) {
         console.error('Error creating cart:', error);
+        (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
+    }
+}));
+userRouter.put('/add-user-id/:cart_id', auth_middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const user_id = req.user_id;
+    const cart_id = req.params.cart_id;
+    try {
+        const cartExist = yield prisma.cart.findUnique({
+            where: {
+                cart_id: cart_id
+            }
+        });
+        if (!cartExist) {
+            return res.status(statusCode_1.default.NOT_FOUND).json({
+                success: false,
+                message: "Cart Not Found"
+            });
+        }
+        yield prisma.cart.update({
+            where: {
+                cart_id: cart_id
+            },
+            data: {
+                user_id: user_id
+            }
+        });
+        return res.status(statusCode_1.default.OK).json({
+            success: true,
+            message: "User added to cart successfully"
+        });
+    }
+    catch (error) {
+        console.log(error);
         (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
     }
 }));
@@ -266,7 +459,7 @@ userRouter.post('/addToCart/:product_id', (req, res) => __awaiter(void 0, void 0
                 where: {
                     cart_id_product_id: {
                         cart_id: decoded.cart_id,
-                        product_id: product_id
+                        product_id: product_id,
                     }
                 },
                 data: {
@@ -279,7 +472,8 @@ userRouter.post('/addToCart/:product_id', (req, res) => __awaiter(void 0, void 0
                 data: {
                     product_id: product_id,
                     cart_id: decoded.cart_id,
-                    quantity: req.body.quantity || 1
+                    quantity: req.body.quantity,
+                    color: req.body.color
                 }
             });
         }
@@ -290,6 +484,88 @@ userRouter.post('/addToCart/:product_id', (req, res) => __awaiter(void 0, void 0
     }
     catch (error) {
         console.log(error);
+        (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
+    }
+}));
+userRouter.put('/update/cart/quantity/:cart_item_id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const cart_item_id = req.params.cart_item_id;
+    const cartToken = req.headers['cart-token'];
+    const { quantity } = req.body;
+    try {
+        let decoded;
+        if (cartToken) {
+            decoded = jsonwebtoken_1.default.verify(cartToken, CART_JWT_SECRET_KEY);
+        }
+        else {
+            return res.status(statusCode_1.default.BAD_REQUEST).json({
+                success: false,
+                message: "Cart Token is not provided"
+            });
+        }
+        // Validate the quantity
+        if (quantity <= 0) {
+            return res.status(statusCode_1.default.BAD_REQUEST).json({
+                success: false,
+                message: "Quantity must be greater than zero"
+            });
+        }
+        // Check if the cart item exists
+        const cartItem = yield prisma.cartItem.findUnique({
+            where: {
+                cart_item_id: cart_item_id
+            }
+        });
+        if (!cartItem) {
+            return res.status(statusCode_1.default.NOT_FOUND).json({
+                success: false,
+                message: "Cart Item Not Found"
+            });
+        }
+        // Check if the cart associated with the item exists and matches the user's cart
+        const cartExist = yield prisma.cart.findUnique({
+            where: {
+                cart_id: decoded.cart_id
+            }
+        });
+        if (!cartExist || cartItem.cart_id !== decoded.cart_id) {
+            return res.status(statusCode_1.default.NOT_FOUND).json({
+                success: false,
+                message: "Cart Not Found or Cart Item does not belong to this cart"
+            });
+        }
+        const product = yield prisma.product.findUnique({
+            where: {
+                product_id: cartItem.product_id
+            }
+        });
+        if (!product) {
+            return res.status(statusCode_1.default.NOT_FOUND).json({
+                success: false,
+                message: "Product Not Found"
+            });
+        }
+        // Check if the new quantity exceeds the product's availability
+        if (quantity > product.availability) {
+            return res.status(statusCode_1.default.BAD_REQUEST).json({
+                success: false,
+                message: "Quantity exceeds stock limit"
+            });
+        }
+        // Update the quantity of the cart item
+        yield prisma.cartItem.update({
+            where: {
+                cart_item_id: cart_item_id
+            },
+            data: {
+                quantity: quantity
+            }
+        });
+        return res.status(statusCode_1.default.OK).json({
+            success: true,
+            message: "Cart Item Quantity Updated Successfully"
+        });
+    }
+    catch (error) {
         (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
     }
 }));
@@ -313,7 +589,11 @@ userRouter.get("/cart", (req, res) => __awaiter(void 0, void 0, void 0, function
             }, select: {
                 cart_id: true,
                 user_id: true,
-                cartItems: true
+                cartItems: {
+                    include: {
+                        product: true, // This will include all fields of the related Product model
+                    },
+                }
             }
         });
         if (!cart) {
@@ -331,6 +611,34 @@ userRouter.get("/cart", (req, res) => __awaiter(void 0, void 0, void 0, function
         (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
     }
 }));
+userRouter.delete('/delete/cart/tempCartItems', auth_middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const cartToken = req.headers['cart-token'];
+    let decoded;
+    if (cartToken) {
+        decoded = jsonwebtoken_1.default.verify(cartToken, CART_JWT_SECRET_KEY);
+    }
+    else {
+        return res.status(statusCode_1.default.BAD_REQUEST).json({
+            success: false,
+            message: "Cart Token is not given"
+        });
+    }
+    try {
+        yield prisma.cartItem.deleteMany({
+            where: {
+                cart_id: decoded.cart_id
+            }
+        });
+        return res.status(statusCode_1.default.OK).json({
+            success: true,
+            message: "Temporary Cart Items Deleted Successfully"
+        });
+    }
+    catch (error) {
+        console.log(error);
+        (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
+    }
+}));
 userRouter.post('/create/review/:product_id', auth_middleware_1.userAuthMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const body = req.body;
     const user_id = req.user_id;
@@ -344,7 +652,7 @@ userRouter.post('/create/review/:product_id', auth_middleware_1.userAuthMiddlewa
     if (!success) {
         return res.status(statusCode_1.default.BAD_REQUEST).json({
             success: false,
-            message: error.message
+            message: error === null || error === void 0 ? void 0 : error.issues
         });
     }
     try {
@@ -386,8 +694,6 @@ userRouter.post("/create/review/images/presigned/:review_id", auth_middleware_1.
             message: "zod validation Error",
         });
     }
-    console.log(body.imageName);
-    console.log(body.contentType);
     let fileExtension = body.imageName.split('.').pop().toLowerCase();
     try {
         const review_id = req.params.review_id;
@@ -502,6 +808,50 @@ userRouter.delete('/delete/review/:review_id', auth_middleware_1.userAuthMiddlew
         return res.status(statusCode_1.default.OK).json({
             success: true,
             message: "Review Deleted"
+        });
+    }
+    catch (error) {
+        (0, handleErrorResponse_1.default)(res, error, statusCode_1.default.INTERNAL_SERVER_ERROR);
+    }
+}));
+userRouter.post(`/cart/bill/:cart_id`, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const cart_id = req.params.cart_id;
+    const { address_id } = req.body;
+    try {
+        const cart = yield prisma.cart.findUnique({
+            where: {
+                cart_id: cart_id
+            },
+            include: {
+                cartItems: {
+                    include: {
+                        product: true
+                    }
+                }
+            }
+        });
+        if (!cart) {
+            return res.status(statusCode_1.default.BAD_REQUEST).json({
+                success: false,
+                message: "Cart Not Found"
+            });
+        }
+        const address = yield prisma.address.findUnique({
+            where: {
+                address_id: address_id
+            }
+        });
+        if (!address) {
+            return res.status(statusCode_1.default.BAD_REQUEST).json({
+                success: false,
+                message: "Address Not Found"
+            });
+        }
+        const bill = yield (0, calculationHelper_1.billing)(cart.cartItems, address, 18);
+        return res.status(statusCode_1.default.OK).json({
+            success: true,
+            message: "Bill Generated",
+            bill: bill
         });
     }
     catch (error) {

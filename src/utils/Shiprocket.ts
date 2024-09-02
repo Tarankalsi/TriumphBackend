@@ -147,7 +147,7 @@ export const selectBestCourier = async (packageDetails: PackageDetails) => {
       }
     );
 
-    console.log("Courier response: ",courierResponse.data.data.available_courier_companies)
+
 
     if (!courierResponse.data.data || !courierResponse.data.data.available_courier_companies.length) {
       console.error('No available courier companies for the selected route.');

@@ -786,8 +786,7 @@ userRouter.post("/create/review/images/presigned/:review_id", userAuthMiddleware
         });
     }
 
-    console.log(body.imageName)
-    console.log(body.contentType)
+
 
     let fileExtension = body.imageName.split('.').pop().toLowerCase();
 
@@ -967,7 +966,7 @@ userRouter.post(`/cart/bill/:cart_id`, async(req,res)=>{
         }
 
         const bill = await billing(cart.cartItems,address,18)
-        console.log(bill)
+   
         return res.status(statusCode.OK).json({
             success: true,
             message: "Bill Generated",
