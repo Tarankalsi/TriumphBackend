@@ -1,0 +1,20 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-triumphlights-dev-62b87-authRole",
+      "UnauthRoleArn": "arn:aws:iam::761018868566:role/amplify-triumphlights-dev-62b87-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::761018868566:role/amplify-triumphlights-dev-62b87-authRole",
+      "Region": "ap-south-1",
+      "DeploymentBucketName": "amplify-triumphlights-dev-62b87-deployment",
+      "UnauthRoleName": "amplify-triumphlights-dev-62b87-unauthRole",
+      "StackName": "amplify-triumphlights-dev-62b87",
+      "StackId": "arn:aws:cloudformation:ap-south-1:761018868566:stack/amplify-triumphlights-dev-62b87/1c41b870-691a-11ef-aafa-0a8ff4c5cb2b",
+      "AmplifyAppId": "d30jjt8guyg2w7"
+    },
+    "categories": {
+      "hosting": {
+        "S3AndCloudFront": {}
+      }
+    }
+  }
+}

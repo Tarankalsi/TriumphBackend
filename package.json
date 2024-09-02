@@ -2,18 +2,18 @@
   "name": "triumph-lights",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prestart": "npm run build"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "-": "^0.0.1",
     "@aws-sdk/client-s3": "^3.620.0",
     "@aws-sdk/client-ses": "^3.616.0",
     "@aws-sdk/credential-providers": "^3.621.0",
