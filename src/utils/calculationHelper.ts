@@ -31,7 +31,7 @@ export const billing = async (cartItems: CartItem[], address :Address, tax: numb
         pickup_address_location: pickup_location_name,
       });
     
-    console.log("Courier partner: ",courier_partner)
+ 
 
       bill.deliveryFee = courier_partner.rate
 

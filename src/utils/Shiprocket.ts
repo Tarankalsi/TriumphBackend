@@ -120,7 +120,7 @@ export const selectBestCourier = async (packageDetails: PackageDetails) => {
       'https://apiv2.shiprocket.in/v1/external/settings/company/pickup',
       { headers: getShiprocketHeaders() }
     );
-    console.log("PickupPincode",pickupResponse.data.data.shipping_address)
+
 
     const pickupPincode = pickupResponse.data.data.shipping_address.find(
       (address: any) => address.pickup_location === packageDetails.pickup_address_location
@@ -129,9 +129,6 @@ export const selectBestCourier = async (packageDetails: PackageDetails) => {
     if (!pickupPincode) {
       throw new Error('Pickup pincode not found for the specified pickup address location.');
     }
-    console.log("Pickup Pincode: ",pickupPincode)
-    console.log("Deliver Pincode: ",packageDetails.delivery_postcode)
-    
 
     // Check courier serviceability
     const courierResponse = await axios.get(

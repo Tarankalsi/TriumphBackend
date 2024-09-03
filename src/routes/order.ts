@@ -204,7 +204,7 @@ orderRouter.post("/create", userAuthMiddleware, async (req, res) => {
         });
 
         // Send confirmation email
-        const html = `<!DOCTYPE html>
+        const html = `
 <html lang="en">
 <head>
   <meta charset="UTF-8">

@@ -6,7 +6,7 @@ type sendEmailProp = {
     to: string,
     subject: string,
     message: string,
-    html?: string
+    html: string
 }
 
 export const sendEmail = async ({ to, subject, message ,html}: sendEmailProp) => {
@@ -15,6 +15,7 @@ export const sendEmail = async ({ to, subject, message ,html}: sendEmailProp) =>
     if (!sourceEmail) {
         throw new Error('Source email address is not defined in environment variables.');
     }
+    console.log("Confirmation html :",html ?html : "html is not there" )
 
     const params = {
         Source: sourceEmail,// Replace with your verified domain email
