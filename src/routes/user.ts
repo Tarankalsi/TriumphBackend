@@ -126,7 +126,7 @@ userRouter.post('/signin', async (req, res) => {
 
         const html = `  <h1>OTP Authentification</h1>
                         <p>Hi ${userExist.full_name}</p>
-                        <p>Please enter the following verification code to access your Twilio Account</p>
+                        <p>Please enter the following verification code of TriumphLights to place your order</p>
                         <h4>${code}</h4>`;
 
         const emailData = {
@@ -646,6 +646,50 @@ userRouter.put('/update/cart/quantity/:cart_item_id', async (req, res) => {
         handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR);
     }
 
+})
+
+userRouter.delete('/remove/cart/item/:cart_item_id', async (req, res) => {
+    const cart_item_id = req.params.cart_item_id
+    const cartToken = req.headers['cart-token'] as string
+
+    try {
+        let decoded;
+        if (cartToken) {
+            decoded = jwt.verify(cartToken, CART_JWT_SECRET_KEY) as cartTokenPayload;
+        } else {
+            return res.status(statusCode.BAD_REQUEST).json({
+                success: false,
+                message: "Cart Token is not provided"
+            });
+        }
+
+        // Check if the cart item exists
+        const cartItem = await prisma.cartItem.findUnique({
+            where: {
+                cart_item_id: cart_item_id
+            }
+        });
+
+        if (!cartItem) {
+            return res.status(statusCode.NOT_FOUND).json({
+                success: false,
+                message: "Cart Item Not Found"
+            })
+        }
+
+        await prisma.cartItem.delete({
+            where: {
+                cart_item_id: cart_item_id
+            }
+        })
+
+        return res.status(statusCode.OK).json({
+            success: true,
+            message: "Cart Item Removed Successfully"
+        })
+    } catch (error) {
+        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+    }
 })
 
 // Update behaviour when user is logged in
