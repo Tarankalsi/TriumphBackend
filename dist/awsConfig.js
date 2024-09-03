@@ -13,7 +13,7 @@ const config = {
     region: process.env.REGION,
     credentials: {
         accessKeyId: accessKeyId,
-        secretAccessKey: accessKeyId
+        secretAccessKey: secretAccessKey
     }
 };
 exports.s3 = new client_s3_1.S3Client(config);

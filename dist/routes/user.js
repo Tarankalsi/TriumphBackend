@@ -816,7 +816,7 @@ userRouter.delete('/delete/review/:review_id', auth_middleware_1.userAuthMiddlew
 }));
 userRouter.post(`/cart/bill/:cart_id`, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const cart_id = req.params.cart_id;
-    const { address_id } = req.body;
+    const { address_id, pickup_location_name } = req.body;
     try {
         const cart = yield prisma.cart.findUnique({
             where: {
@@ -847,7 +847,7 @@ userRouter.post(`/cart/bill/:cart_id`, (req, res) => __awaiter(void 0, void 0, v
                 message: "Address Not Found"
             });
         }
-        const bill = yield (0, calculationHelper_1.billing)(cart.cartItems, address, 18);
+        const bill = yield (0, calculationHelper_1.billing)(cart.cartItems, address, 18, pickup_location_name);
         return res.status(statusCode_1.default.OK).json({
             success: true,
             message: "Bill Generated",

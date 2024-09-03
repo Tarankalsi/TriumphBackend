@@ -120,7 +120,7 @@ orderRouter.post("/create", userAuthMiddleware, async (req, res) => {
         return weight + (parseFloat(cartItem.product.item_weight) * cartItem.quantity) / 1000;
       }, 0);
   
-      const bill = await  billing(cart.cartItems, address, 18);
+      const bill = await  billing(cart.cartItems, address, 18,body.pickup_location_name);
   
       // Prisma Transaction Block for Atomic Operations
       const order = await prisma.$transaction(async (prisma) => {

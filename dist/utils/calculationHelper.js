@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.calculateCartWeight = exports.billing = void 0;
 const Shiprocket_1 = require("./Shiprocket");
-const billing = (cartItems, address, tax) => __awaiter(void 0, void 0, void 0, function* () {
+const billing = (cartItems, address, tax, pickup_location_name) => __awaiter(void 0, void 0, void 0, function* () {
     const bill = {
         subTotal: 0,
         total: 0,
@@ -25,8 +25,9 @@ const billing = (cartItems, address, tax) => __awaiter(void 0, void 0, void 0, f
         weight: totalWeight,
         cod: 1, // 1 for COD, 0 for Prepaid
         declared_value: bill.total,
-        pickup_address_location: 'Primary',
+        pickup_address_location: pickup_location_name,
     });
+    console.log("Courier partner: ", courier_partner);
     bill.deliveryFee = courier_partner.rate;
     // calculate subtotal
     cartItems.forEach((cartItem) => {

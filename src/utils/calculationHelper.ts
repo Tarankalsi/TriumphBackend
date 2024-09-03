@@ -11,7 +11,7 @@ type CartItem = {
     color: string;
     product: Product;
 };
-export const billing = async (cartItems: CartItem[], address :Address, tax: number ) => {
+export const billing = async (cartItems: CartItem[], address :Address, tax: number , pickup_location_name : string) => {
 
     const bill = {
         subTotal: 0,
@@ -28,8 +28,10 @@ export const billing = async (cartItems: CartItem[], address :Address, tax: numb
         weight: totalWeight,
         cod: 1, // 1 for COD, 0 for Prepaid
         declared_value: bill.total,
-        pickup_address_location: 'Primary',
+        pickup_address_location: pickup_location_name,
       });
+    
+    console.log("Courier partner: ",courier_partner)
 
       bill.deliveryFee = courier_partner.rate
 

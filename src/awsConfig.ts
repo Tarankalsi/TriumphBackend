@@ -15,7 +15,7 @@ const config = {
   region: process.env.REGION,
   credentials: {
     accessKeyId: accessKeyId  as string, 
-    secretAccessKey: accessKeyId  as string
+    secretAccessKey: secretAccessKey  as string
   } as AwsCredentialIdentity
 }
 

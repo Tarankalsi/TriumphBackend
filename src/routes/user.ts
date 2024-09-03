@@ -931,7 +931,7 @@ userRouter.delete('/delete/review/:review_id', userAuthMiddleware, async (req, r
 
 userRouter.post(`/cart/bill/:cart_id`, async(req,res)=>{
     const cart_id = req.params.cart_id
-    const{address_id} = req.body
+    const{address_id , pickup_location_name} = req.body
     try {
         const cart = await prisma.cart.findUnique({
             where: {
@@ -965,7 +965,8 @@ userRouter.post(`/cart/bill/:cart_id`, async(req,res)=>{
             })
         }
 
-        const bill = await billing(cart.cartItems,address,18)
+        const bill = await billing(cart.cartItems,address,18,pickup_location_name)
+        
    
         return res.status(statusCode.OK).json({
             success: true,

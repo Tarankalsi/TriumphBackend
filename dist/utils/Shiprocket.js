@@ -77,6 +77,7 @@ const selectBestCourier = (packageDetails) => __awaiter(void 0, void 0, void 0, 
     try {
         // Fetch pickup location details
         const pickupResponse = yield axios_1.default.get('https://apiv2.shiprocket.in/v1/external/settings/company/pickup', { headers: getShiprocketHeaders() });
+        console.log("PickupPincode", pickupResponse.data.data.shipping_address);
         const pickupPincode = (_a = pickupResponse.data.data.shipping_address.find((address) => address.pickup_location === packageDetails.pickup_address_location)) === null || _a === void 0 ? void 0 : _a.pin_code;
         if (!pickupPincode) {
             throw new Error('Pickup pincode not found for the specified pickup address location.');

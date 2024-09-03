@@ -113,7 +113,7 @@ orderRouter.post("/create", auth_middleware_1.userAuthMiddleware, (req, res) => 
         const totalWeight = cart.cartItems.reduce((weight, cartItem) => {
             return weight + (parseFloat(cartItem.product.item_weight) * cartItem.quantity) / 1000;
         }, 0);
-        const bill = yield (0, calculationHelper_1.billing)(cart.cartItems, address, 18);
+        const bill = yield (0, calculationHelper_1.billing)(cart.cartItems, address, 18, body.pickup_location_name);
         // Prisma Transaction Block for Atomic Operations
         const order = yield prisma.$transaction((prisma) => __awaiter(void 0, void 0, void 0, function* () {
             if (!user.full_name || !user.phone_number || !user.cart) {
