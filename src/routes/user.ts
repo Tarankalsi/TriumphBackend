@@ -406,7 +406,7 @@ userRouter.post('/create/cart', userIsLoggedIn, async (req, res) => {
                 cartToken: existCartToken,
             });
         }
-
+        
         let newCart;
         
         if (is_temporary) {
