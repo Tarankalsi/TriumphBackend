@@ -374,56 +374,76 @@ userRouter.delete(`/delete/address/:address_id`, userAuthMiddleware, async (req,
 
 // Update behaviour when user is logged in
 userRouter.post('/create/cart', userIsLoggedIn, async (req, res) => {
+    const user_id = req.user_id;
+    const { is_temporary } = req.body;
 
-    const user_id = req.user_id
-    const { is_temporary } = req.body
-
-    const { success, error } = createCartSchema.safeParse(req.body)
+    const { success, error } = createCartSchema.safeParse(req.body);
 
     if (!success) {
         return res.status(statusCode.BAD_REQUEST).json({
             success: false,
             message: "Zod verification failed",
-            error: error?.issues
-        })
+            error: error?.issues,
+        });
     }
 
     try {
-        let newCart
+        // Check if user has an existing cart (temporary or permanent)
+        const existingCart = await prisma.cart.findFirst({
+            where: {
+                user_id: user_id,
+                is_temporary: is_temporary ,  // Check by cart type
+            },
+        });
+
+        // If cart exists, return an error message
+        if (existingCart) {
+            const existCartToken = jwt.sign({ cart_id: existingCart.cart_id }, CART_JWT_SECRET_KEY);
+
+            return res.status(statusCode.OK).json({
+                success: false,
+                message: `A ${is_temporary ? 'temporary' : 'permanent'} cart already exists for this user.`,
+                cartToken: existCartToken,
+            });
+        }
+
+        let newCart;
+        
         if (is_temporary) {
             if (user_id) {
+                // Create a new temporary cart for an existing user
                 newCart = await prisma.cart.create({
                     data: {
                         user_id: user_id,
-                        is_temporary: is_temporary
-                    }
-                })
+                        is_temporary: true,
+                    },
+                });
             } else {
                 return res.status(statusCode.OK).json({
                     success: false,
-                    message: "Temporary cart only be created if user is exist",
-                })
+                    message: "Temporary cart can only be created if user exists.",
+                });
             }
-
         } else {
+            // Create a new permanent cart
             newCart = await prisma.cart.create({
                 data: {
-                    user_id: user_id ?? null
-                }
-            })
+                    user_id: user_id ?? null,
+                    is_temporary: false,
+                },
+            });
         }
 
-        const cartToken = jwt.sign({ cart_id: newCart.cart_id }, CART_JWT_SECRET_KEY)
+        const cartToken = jwt.sign({ cart_id: newCart.cart_id }, CART_JWT_SECRET_KEY);
 
         return res.status(statusCode.OK).json({
             success: true,
-            message: "Cart created Successfully",
-            cartToken: cartToken
-        })
-
+            message: "Cart created successfully.",
+            cartToken: cartToken,
+        });
     } catch (error) {
         console.error('Error creating cart:', error);
-        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR)
+        handleErrorResponse(res, error as CustomError, statusCode.INTERNAL_SERVER_ERROR);
     }
 })
 
